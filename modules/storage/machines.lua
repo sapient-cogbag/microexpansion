@@ -83,7 +83,24 @@ microexpansion.register_node("chest", {
 	end,
 	allow_metadata_inventory_put = function(pos, listname, index, stack, player)
 		if listname == "main" then
-			return stack:get_count()
+			local inv = minetest.get_meta(pos):get_inventory()
+			local max_slots = inv:get_size(listname)
+			local max_items = math.floor(max_slots * 99)
+
+			local slots, items = 0, 0
+			-- Get amount of items in drive
+			for i = 1, max_items do
+				local stack = inv:get_stack("main", i)
+				local item = stack:get_name()
+				if item ~= "" then
+					slots = slots + 1
+					local num = stack:get_count()
+					if num == 0 then num = 1 end
+					items = items + num
+				end
+			end
+
+			return math.min(stack:get_count(),max_items-items)
 		elseif listname == "cells" then
 			if minetest.get_item_group(stack:get_name(), "microexpansion_cell") ~= 0 then
 				return 1
@@ -98,7 +115,20 @@ microexpansion.register_node("chest", {
 		if listname == "main" then
 			local inv = minetest.get_meta(pos):get_inventory()
 			inv:remove_item(listname, stack)
-			inv:add_item(listname, stack)
+			local stackname = stack:get_name()
+			local found = false
+			for i = 0, inv:get_size(listname) do
+				local inside = inv:get_stack(listname, i)
+				if inside:get_name() == stackname then
+					inside:set_count(inside:get_count() + stack:get_count())
+					inv:set_stack(listname, i, inside)
+					found = true
+					break;
+				end
+			end
+			if not found then
+				inv:add_item(listname, stack)
+			end
 			microexpansion.cell_desc(inv, "cells", 1)
 		elseif listname == "cells" then
 			local meta = minetest.get_meta(pos)
@@ -113,13 +143,6 @@ microexpansion.register_node("chest", {
 			meta:set_string("inv_name", "main")
 			meta:set_string("formspec", chest_formspec(pos, 1, "main", page_max))
 		end
-	end,
-	on_metadata_inventory_take = function(pos, listname, index, stack, player)
-		local inv = minetest.get_meta(pos):get_inventory()
-		if listname == "search" then
-			inv:remove_item("main", stack)
-		end
-		microexpansion.cell_desc(inv, "cells", 1)
 	end,
 	allow_metadata_inventory_take = function(pos, listname, index, stack, player)
 		if listname == "cells" then
@@ -141,7 +164,14 @@ microexpansion.register_node("chest", {
 			meta:set_string("formspec", chest_formspec(pos, 1))
 			return new_stack:get_count()
 		end
-		return stack:get_count()
+		return math.min(stack:get_count(),stack:get_stack_max())
+	end,
+	on_metadata_inventory_take = function(pos, listname, index, stack, player)
+		local inv = minetest.get_meta(pos):get_inventory()
+		if listname == "search" then
+			inv:remove_item("main", stack)
+		end
+		microexpansion.cell_desc(inv, "cells", 1)
 	end,
 	on_receive_fields = function(pos, formname, fields, sender)
 		local meta = minetest.get_meta(pos)
