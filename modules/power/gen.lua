@@ -29,12 +29,13 @@ me.register_machine("fuel_fired_generator", {
 	machine = {
 		type = "provider",
 		on_survey = function(pos)
+			--TODO: burn fuel
 			return 5 -- Generate 5 ME/tick
 		end,
 	},
 })
 
--- [register node] Super Smelter
+--[[register node] Super Smelter
 me.register_node("super_smelter", {
 	description = "Super Smelter",
 	tiles = {
@@ -86,4 +87,4 @@ me.register_node("geo_generator", {
 			return 10 -- Generate 10 ME/tick
 		end,
 	},
-})
+})]]

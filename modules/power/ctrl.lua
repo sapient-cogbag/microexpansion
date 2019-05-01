@@ -1,10 +1,11 @@
 -- power/ctrl.lua
 
 local me = microexpansion
+local power = me.power
 
 -- [register node] Controller
 me.register_node("ctrl", {
-	description = "Power Controller",
+	description = "ME Drive",
 	tiles = {
 		"ctrl_sides",
 		"ctrl_bottom",
@@ -45,12 +46,7 @@ me.register_node("ctrl", {
 		meta:set_string("network_id", id)
 		meta:set_string("owner", name)
 
-		-- Initialize other meta
-		meta:set_int("input", 0)
-		meta:set_int("output", 0)
-		meta:set_int("storage", 0)
-
-		me.networks[id] = pos
+		me.networks[id] = {pos = pos}
 
 		-- Trace Network
 		power.trace(pos)
@@ -61,7 +57,7 @@ me.register_node("ctrl", {
 		me.networks[id] = nil
 
 		-- Remove unit from network
-		me.network_remove(pos)
+		--me.network_remove(pos)
 		-- Trace/clear network
 		power.trace(pos)
 	end,

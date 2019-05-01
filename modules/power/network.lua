@@ -9,11 +9,11 @@ local power = me.power
 
 -- [local function] Renumber table
 local function renumber_table(t)
-		local result = {}
-		for _, value in pairs(t) do
-				result[#result+1] = value
-		end
-		return result
+	local result = {}
+	for _, value in pairs(t) do
+		table.insert(result,value)
+	end
+	return result
 end
 
 -- [local function] Get netitem by position
@@ -25,70 +25,14 @@ local function get_netitem_by_pos(list, pos)
 	end
 end
 
----
---- API Functions
----
-
--- [function] Get node
-function me.get_node(pos)
-	local node = minetest.get_node_or_nil(pos)
-	if node then return node end
-	local vm = VoxelManip()
-	local MinEdge, MaxEdge = vm:read_from_map(pos, pos)
-	return minetest.get_node(pos)
-end
-
 -- [function] Generate new network ID
 function power.new_id()
-	local count = 1
-	for _, i in pairs(me.networks) do
-		count = count + 1
-	end
-
-	return "network_"..count
-end
-
--- [function] Can connect
-function power.can_connect(pos)
-	local node = me.get_node(pos)
-	local res  = minetest.get_item_group(node.name, "me_connect")
-
-	if res == 1 then
-		return true
-	else
-		return false
-	end
-end
-
--- [function] Get connected nodes
-function power.get_connected_nodes(pos, include_ctrl)
-	local nodes = {
-			{x=pos.x+1, y=pos.y,   z=pos.z},
-			{x=pos.x-1, y=pos.y,   z=pos.z},
-			{x=pos.x,   y=pos.y+1, z=pos.z},
-			{x=pos.x,   y=pos.y-1, z=pos.z},
-			{x=pos.x,   y=pos.y,   z=pos.z+1},
-			{x=pos.x,   y=pos.y,   z=pos.z-1},
-		}
-
-	for _, pos in pairs(nodes) do
-		if not power.can_connect(pos) then
-			nodes[_] = nil
-		else
-			if include_ctrl == false then
-				if me.get_node(pos).name == "microexpansion:ctrl" then
-					nodes[_] = nil
-				end
-			end
-		end
-	end
-
-	return renumber_table(nodes)
+	return "network_"..#me.networks+1
 end
 
 -- [function] Add machine to network
 function power.add_machine(pos, def)
-	
+
 end
 
 -- [function] Remove machine from network

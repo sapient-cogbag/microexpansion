@@ -22,36 +22,6 @@ end
 -- Load API
 dofile(modpath.."/api.lua")
 
------------------
----- ME DATA ----
------------------
-
--- [function] Load
-function microexpansion.load()
-	local res = io.open(worldpath.."/microexpansion.txt", "r")
-	if res then
-		res = minetest.deserialize(res:read("*all"))
-		if type(res) == "table" then
-			microexpansion.networks = res.networks or {}
-		end
-	end
-end
-
--- Load
-microexpansion.load()
-
--- [function] Save
-function microexpansion.save()
-	local data = {
-		networks = microexpansion.networks,
-	}
-
-	io.open(worldpath.."/microexpansion.txt", "w"):write(minetest.serialize(data))
-end
-
--- [register on] Server Shutdown
-minetest.register_on_shutdown(microexpansion.save)
-
 -------------------
 ----- MODULES -----
 -------------------
@@ -64,7 +34,9 @@ local settings = Settings(modpath.."/modules.conf"):to_table()
 function microexpansion.get_module_path(name)
 	local module_path = modpath.."/modules/"..name
 
-	if io.open(module_path.."/init.lua") then
+  local handle = io.open(module_path.."/init.lua")
+	if handle then
+	  io.close(handle)
 		return module_path
 	end
 end
@@ -72,10 +44,10 @@ end
 -- [function] Load module (overrides modules.conf)
 function microexpansion.load_module(name)
 	if loaded_modules[name] ~= false then
-		local module_init = microexpansion.get_module_path(name).."/init.lua"
+		local module_path = microexpansion.get_module_path(name)
 
-		if module_init then
-			dofile(module_init)
+		if module_path then
+			dofile(module_path.."/init.lua")
 			loaded_modules[name] = true
 			return true
 		else
@@ -89,7 +61,7 @@ end
 
 -- [function] Require module (does not override modules.conf)
 function microexpansion.require_module(name)
-	if settings[name] and settings[name] ~= false then
+	if settings[name] then
 		return microexpansion.load_module(name)
 	end
 end
