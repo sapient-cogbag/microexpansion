@@ -1,12 +1,30 @@
 -- microexpansion/storage.lua
 
 -- [drive] 8k
+microexpansion.register_cell("cell_1k", {
+	description = "1k ME Storage Cell",
+	capacity = 1000,
+})
+
+-- [drive] 8k
+microexpansion.register_cell("cell_2k", {
+	description = "2k ME Storage Cell",
+	capacity = 2000,
+})
+
+-- [drive] 16k
+microexpansion.register_cell("cell_4k", {
+	description = "4k ME Storage Cell",
+	capacity = 4000,
+})
+
+-- [drive] 16k
 microexpansion.register_cell("cell_8k", {
 	description = "8k ME Storage Cell",
 	capacity = 8000,
 })
 
--- [drive] 16k
+-- [drive] 32k
 microexpansion.register_cell("cell_16k", {
 	description = "16k ME Storage Cell",
 	capacity = 16000,
