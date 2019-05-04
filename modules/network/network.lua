@@ -3,9 +3,13 @@
 -- @field #table controller_pos the position of the controller
 -- @field #number power_load the power currently provided to the network
 -- @field #number power_storage the power that can be stored for the next tick
+-- @field #table items the itemstacks stored in the networks drives
+-- @field #number item_capacity the amount of items that can be stored in the networks drives
 local network = {
 	power_load = 0,
-	power_storage = 0
+	power_storage = 0,
+	--for testing it's at 3200 will be set to 0 when the drives work
+	item_capacity = 3200,
 }
 microexpansion.network = network
 
@@ -14,7 +18,7 @@ microexpansion.network = network
 -- @param #table o the object to become a network or nil
 function network:new(o)
 	local n = setmetatable(o or {}, {__index = self})
-	o.machines = {}
+	o.items = {}
 	return o
 end
 
@@ -23,7 +27,7 @@ end
 -- @param #table pos the position of the node to be checked
 -- @return #boolean whether this node has the group me_connect
 function network.can_connect(pos)
-	local node = me.get_node(pos)
+	local node = microexpansion.get_node(pos)
 	return minetest.get_item_group(node.name, "me_connect") > 0
 end
 
@@ -47,7 +51,7 @@ function network.adjacent_connected_nodes(pos, include_ctrl)
 	for _,pos in pairs(adjacent) do
 		if network.can_connect(pos) then
 			if include_ctrl == false then
-				if not me.get_node(pos).name == "microexpansion:ctrl" then
+				if not microexpansion.get_node(pos).name == "microexpansion:ctrl" then
 					table.insert(nodes, pos)
 				end
 			else

@@ -1,11 +1,11 @@
 -- power/ctrl.lua
 
 local me = microexpansion
-local power = me.power
+local network = me.network
 
 -- [register node] Controller
 me.register_node("ctrl", {
-	description = "ME Drive",
+	description = "ME Controller",
 	tiles = {
 		"ctrl_sides",
 		"ctrl_bottom",
@@ -39,27 +39,24 @@ me.register_node("ctrl", {
 	after_place_node = function(pos, player)
 		local name = player:get_player_name()
 		local meta = minetest.get_meta(pos)
-		local id   = power.new_id()
+		table.insert(me.networks,network:new({controller_pos = pos}))
+		me.update_connected_machines(pos)
 
-		meta:set_string("infotext", "Network Controller (owned by "..name..")"
-			.."\nNetwork ID: "..id)
-		meta:set_string("network_id", id)
+		meta:set_string("infotext", "Network Controller (owned by "..name..")")
 		meta:set_string("owner", name)
-
-		me.networks[id] = {pos = pos}
-
-		-- Trace Network
-		power.trace(pos)
 	end,
 	on_destruct = function(pos, player)
 		local meta = minetest.get_meta(pos)
-		local id   = meta:get_string("network_id")
-		me.networks[id] = nil
-
-		-- Remove unit from network
-		--me.network_remove(pos)
-		-- Trace/clear network
-		power.trace(pos)
+		local net,idx = me.get_network(pos)
+		if net then
+			net.controller_pos = nil
+		end
+		if idx then
+			table.remove(me.networks,idx)
+		end
+	end,
+	after_dig_node = function(pos)
+		me.update_connected_machines(pos)
 	end,
 	machine = {
 		type = "transporter",
@@ -86,6 +83,8 @@ me.register_machine("cable", {
 	paramtype = "light",
 	groups = { crumbly = 1, },
 	status = "unstable",
+	after_place_node = me.update_connected_machines,
+	after_dig_node = me.update_connected_machines,
 	machine = {
 		type = "transporter",
 	},

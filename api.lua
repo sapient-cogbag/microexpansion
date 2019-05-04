@@ -116,7 +116,7 @@ function microexpansion.register_node(itemstring, def)
 		def.description = def.description .. "\n"..minetest.colorize("grey", def.usedfor)
 	end
 	-- Update texture
-	if auto_complete ~= false then
+	if def.auto_complete ~= false then
 		for _,i in ipairs(def.tiles) do
 			if #def.tiles[_]:split("^") <= 1 then
 				local prefix = ""
@@ -148,5 +148,22 @@ function microexpansion.register_node(itemstring, def)
 	-- if oredef, Register oredef
 	if def.oredef then
 		microexpansion.register_oredef(BASENAME..":"..itemstring, def.oredef)
+	end
+end
+
+-- get a node, if nessecary load it
+function microexpansion.get_node(pos)
+	local node = minetest.get_node_or_nil(pos)
+	if node then return node end
+	local vm = VoxelManip()
+	local MinEdge, MaxEdge = vm:read_from_map(pos, pos)
+	return minetest.get_node(pos)
+end
+
+function microexpansion.update_node(pos)
+	local node = microexpansion.get_node(pos)
+	local def = minetest.registered_nodes[node.name]
+	if def.me_update then
+		def.me_update(pos,node)
 	end
 end

@@ -3,15 +3,6 @@ me.networks    = {}
 local networks = me.networks
 local path     = microexpansion.get_module_path("network")
 
--- get a node, if nessecary load it
-function me.get_node(pos)
-	local node = minetest.get_node_or_nil(pos)
-	if node then return node end
-	local vm = VoxelManip()
-	local MinEdge, MaxEdge = vm:read_from_map(pos, pos)
-	return minetest.get_node(pos)
-end
-
 -- load Resources
 
 dofile(path.."/network.lua") -- Network Management
@@ -27,21 +18,23 @@ function me.connected_nodes(start_pos)
 	-- return the generated iterator
 	return function ()
 		-- start looking for next pos
-		local found = false
+		local open = false
 		-- pos to be checked
 		local current_pos
 		-- find next unclosed
-		while not found do
+		while not open do
 			-- get unchecked pos
 			current_pos = table.remove(open_list)
 			-- none are left
 			if current_pos == nil then return end
+			-- assume it's open
+			open = true
 			-- check the closed positions
 			for _,closed in pairs(closed_set) do
 				-- if current is unclosed
-				if not vector.equals(closed,current_pos) then
-					--found next unclosed
-					found = true
+				if vector.equals(closed,current_pos) then
+					--found one was closed
+					open = false
 				end
 			end
 		end
@@ -50,7 +43,7 @@ function me.connected_nodes(start_pos)
 		-- iterate through them
 		for _,p in pairs(next_pos) do
 			-- mark position to be checked
-			table.insert(open_set,p)
+			table.insert(open_list,p)
 		end
 		-- add this one to the closed set
 		table.insert(closed_set,current_pos)
@@ -60,17 +53,35 @@ function me.connected_nodes(start_pos)
 end
 
 -- get network connected to position
-function me.get_network(start_pos)
+function me.get_connected_network(start_pos)
 	for npos in me.connected_nodes(start_pos) do
 		if me.get_node(npos).name == "microexpansion:ctrl" then
-			for _,net in pairs(networks) do
-				if vector.equals(npos, net.pos) then
-					return net
-				end
+			local network = me.get_network(npos)
+			if network then
+				return network
 			end
 		end
 	end
 end
+
+function me.update_connected_machines(start_pos)
+	--print("updating connected machines")
+	for npos in me.connected_nodes(start_pos) do
+		me.update_node(npos)
+	end
+end
+
+function me.get_network(pos)
+	for i,net in pairs(networks) do
+		if net.controller_pos then
+			if vector.equals(pos, net.controller_pos) then
+				return net,i
+			end
+		end
+	end
+end
+
+dofile(path.."/ctrl.lua") -- Controller/wires
 
 -- load networks
 function me.load()

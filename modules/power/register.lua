@@ -8,13 +8,14 @@ local power = me.power
 -- [function] Register machine
 function me.register_machine(itemstring, def)
 	-- Set after_place_node
+	local def_afterplace = def.after_place_node
 	def.after_place_node = function(pos, player)
-		if def.after_place_node then
-			def.after_place_node(pos, player)
+		if def_afterplace then
+			def_afterplace(pos, player)
 		end
 
 		local meta  = minetest.get_meta(pos)
-		local nodes = me.get_connected_nodes(pos)
+		local nodes = me.network.adjacent_connected_nodes(pos)
 
 		meta:set_string("infotext", def.description.."\nNo Network")
 
@@ -40,9 +41,10 @@ function me.register_machine(itemstring, def)
 		end
 	end
 	-- Set on_destruct
+	local def_destruct = def.on_destruct
 	def.on_destruct = function(pos, player)
-		if def.on_destruct then
-			def.on_destruct(pos, player)
+		if def_destruct then
+			def_destruct(pos, player)
 		end
 
 		local meta = minetest.get_meta(pos)
