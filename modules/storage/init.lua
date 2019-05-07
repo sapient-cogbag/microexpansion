@@ -11,5 +11,5 @@ dofile(module_path.."/api.lua")
 dofile(module_path.."/storage.lua")
 
 -- Load machines
---dofile(module_path.."/drive.lua")
 dofile(module_path.."/chest.lua")
+dofile(module_path.."/drive.lua")

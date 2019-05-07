@@ -2,79 +2,57 @@
 
 local me = microexpansion
 
--- [me chest] Get formspec
-local function chest_formspec(pos, start_id, listname, page_max, query)
-	local list
-	local page_number = ""
-	local buttons = ""
-	local query = query or ""
+local function update_drive(pos)
+	--FIXME: check if we got connected/disconnected and reroute items
+end
 
-	if not listname then
-		list = "label[3,2;" .. minetest.colorize("red", "No cell!") .. "]"
-	else
-		list = "list[current_name;" .. listname .. ";0,0.3;8,4;" .. (start_id - 1) .. "]"
-		buttons = [[
-			button[3.56,4.35;1.8,0.9;tochest;To Drive]
-			tooltip[tochest;Move everything from your inventory to the ME drive.]
-			button[5.4,4.35;0.8,0.9;prev;<]
-			button[7.25,4.35;0.8,0.9;next;>]
-			tooltip[prev;Previous]
-			tooltip[next;Next]
-			field[0.29,4.6;2.2,1;filter;;]]..query..[[]
-			button[2.1,4.5;0.8,0.5;search;?]
-			button[2.75,4.5;0.8,0.5;clear;X]
-			tooltip[search;Search]
-			tooltip[clear;Reset]
-		]]
-	end
-	if page_max then
-		page_number = "label[6.15,4.5;" .. math.floor((start_id / 32)) + 1 ..
-			"/" .. page_max .."]"
-	end
-
-	return [[
-		size[9,9.5]
-	]]..
-		microexpansion.gui_bg ..
-		microexpansion.gui_slots ..
-		list ..
-	[[
-		label[0,-0.23;ME Chest]
-		list[current_name;cells;8.06,1.8;1,1;]
-		list[current_player;main;0,5.5;8,1;]
-		list[current_player;main;0,6.73;8,3;8]
-		listring[current_name;main]
-		listring[current_player;main]
-		field_close_on_enter[filter;false]
-	]]..
-		page_number ..
-		buttons
+local function write_to_cell(cell, items, item_count)
+	local size = microexpansion.get_cell_size(cell:get_name())
+	local item_meta = cell:get_meta()
+	item_meta:set_string("items", minetest.serialize(items))
+	local base_desc = minetest.registered_craftitems[cell:get_name()].microexpansion.base_desc
+	-- Calculate Percentage
+	local percent = math.floor(item_count / size * 100)
+	-- Update description
+	item_meta:set_string("description", base_desc.."\n"..
+		minetest.colorize("grey", tostring(item_count).."/"..tostring(size).." Items ("..tostring(percent).."%)"))
+	return cell
 end
 
 -- [me chest] Register node
-microexpansion.register_node("chest", {
-	description = "ME Chest",
-	usedfor = "Can interact with items in ME storage cells",
+microexpansion.register_node("drive", {
+	description = "ME Drive",
+	usedfor = "Stores items into ME storage cells",
 	tiles = {
 		"chest_top",
 		"chest_top",
 		"chest_side",
 		"chest_side",
 		"chest_side",
-		"chest_front",
+		"drive_full",
 	},
 	is_ground_content = false,
-	groups = { cracky = 1 },
+	groups = { cracky = 1, me_connect = 1 },
 	paramtype = "light",
 	paramtype2 = "facedir",
-
+	me_update = update_drive,
 	on_construct = function(pos)
 		local meta = minetest.get_meta(pos)
-		meta:set_string("formspec", chest_formspec(pos, 1))
-		meta:set_string("inv_name", "none")
-		meta:set_int("page", 1)
+		meta:set_string("formspec",
+			"size[9,9.5]"..
+			microexpansion.gui_bg ..
+			microexpansion.gui_slots ..
+		[[
+			label[0,-0.23;ME Drive]
+			list[context;main;0,0.3;8,4]
+			list[current_player;main;0,5.5;8,1;]
+			list[current_player;main;0,6.73;8,3;8]
+			listring[current_name;main]
+			listring[current_player;main]
+			field_close_on_enter[filter;false]
+		]])
 		local inv = meta:get_inventory()
-		inv:set_size("cells", 1)
+		inv:set_size("main", 10)
 	end,
 	can_dig = function(pos, player)
 		local meta = minetest.get_meta(pos)
@@ -82,146 +60,115 @@ microexpansion.register_node("chest", {
 		return inv:is_empty("main")
 	end,
 	allow_metadata_inventory_put = function(pos, listname, index, stack, player)
-		if listname == "main" then
-			local inv = minetest.get_meta(pos):get_inventory()
-			local max_slots = inv:get_size(listname)
-			local max_items = math.floor(max_slots * 99)
-
-			local slots, items = 0, 0
-			-- Get amount of items in drive
-			for i = 1, max_items do
-				local stack = inv:get_stack("main", i)
-				local item = stack:get_name()
-				if item ~= "" then
-					slots = slots + 1
-					local num = stack:get_count()
-					if num == 0 then num = 1 end
-					items = items + num
-				end
-			end
-
-			return math.min(stack:get_count(),max_items-items)
-		elseif listname == "cells" then
-			if minetest.get_item_group(stack:get_name(), "microexpansion_cell") ~= 0 then
-				return 1
-			else
-				return 0
-			end
+		if minetest.get_item_group(stack:get_name(), "microexpansion_cell") ~= 0 then
+			return 1
 		else
 			return 0
 		end
 	end,
 	on_metadata_inventory_put = function(pos, listname, index, stack, player)
-		if listname == "main" then
-			local inv = minetest.get_meta(pos):get_inventory()
-			inv:remove_item(listname, stack)
-			local stackname = stack:get_name()
-			local found = false
-			for i = 0, inv:get_size(listname) do
-				local inside = inv:get_stack(listname, i)
-				if inside:get_name() == stackname then
-					inside:set_count(inside:get_count() + stack:get_count())
-					inv:set_stack(listname, i, inside)
-					found = true
-					break;
-				end
-			end
-			if not found then
-				inv:add_item(listname, stack)
-			end
-			microexpansion.cell_desc(inv, "cells", 1)
-		elseif listname == "cells" then
-			local meta = minetest.get_meta(pos)
-			local inv = meta:get_inventory()
-			local items = minetest.deserialize(stack:get_meta():get_string("items"))
-			local size = me.get_cell_size(stack:get_name())
-			local page_max = me.int_to_pagenum(size) + 1
-			inv:set_size("main", me.int_to_stacks(size))
-			if items then
-				inv:set_list("main", items)
-			end
-			meta:set_string("inv_name", "main")
-			meta:set_string("formspec", chest_formspec(pos, 1, "main", page_max))
-		end
-	end,
-	allow_metadata_inventory_take = function(pos, listname, index, stack, player)
-		if listname == "cells" then
-			local t = minetest.get_us_time()
-			local meta = minetest.get_meta(pos)
-			local inv = meta:get_inventory()
-			local tab = {}
-			local new_stack = inv:get_stack(listname, 1)
-			local item_meta = new_stack:get_meta()
-			for i = 1, inv:get_size("main") do
-				if inv:get_stack("main", i):get_name() ~= "" then
-					tab[#tab + 1] = inv:get_stack("main", i):to_string()
-				end
-			end
-			item_meta:set_string("items", minetest.serialize(tab))
-			inv:set_stack(listname, 1, new_stack)
-			inv:set_size("main", 0)
-			meta:set_int("page", 1)
-			meta:set_string("formspec", chest_formspec(pos, 1))
-			return new_stack:get_count()
-		end
-		return math.min(stack:get_count(),stack:get_stack_max())
-	end,
-	on_metadata_inventory_take = function(pos, listname, index, stack, player)
-		local inv = minetest.get_meta(pos):get_inventory()
-		if listname == "search" then
-			inv:remove_item("main", stack)
-		end
-		microexpansion.cell_desc(inv, "cells", 1)
-	end,
-	on_receive_fields = function(pos, formname, fields, sender)
-		local meta = minetest.get_meta(pos)
-		local page = meta:get_int("page")
-		local inv_name = meta:get_string("inv_name")
-		local inv = meta:get_inventory()
-		local page_max = math.floor(inv:get_size("main") / 32) + 1
-		local cell_stack = inv:get_stack("cells", 1)
-		if inv_name == "none" then
+		me.update_connected_machines(pos)
+		local network,cp = me.get_connected_network(pos)
+		if network == nil then
 			return
 		end
-		if fields.next then
-			if page + 32 > inv:get_size(inv_name) then
-				return
+		local ctrl_meta = minetest.get_meta(cp)
+		local ctrl_inv = ctrl_meta:get_inventory()
+		local items = minetest.deserialize(stack:get_meta():get_string("items"))
+		if items == nil then
+			print("no items")
+			me.update_connected_machines(pos)
+			return
+		end
+		for _,stack in pairs(items) do
+			me.insert_item(stack, ctrl_inv, "main")
+		end
+		me.update_connected_machines(pos)
+	end,
+	allow_metadata_inventory_take = function(pos, listname, index, stack, player)
+		--FIXME sometimes items vanish if one cell is filled
+		local meta = minetest.get_meta(pos)
+		local own_inv = meta:get_inventory()
+		local network,cp = me.get_connected_network(pos)
+		if network == nil then
+			return stack:get_count()
+		end
+		local ctrl_meta = minetest.get_meta(cp)
+		local ctrl_inv = ctrl_meta:get_inventory()		
+		local cells = {}
+		for i = 1, own_inv:get_size("main") do
+			local cell = own_inv:get_stack("main", i)
+			local name = cell:get_name()
+			if name ~= "" then
+				table.insert(cells, i, cell)
 			end
-			meta:set_int("page", page + 32)
-			meta:set_string("formspec", chest_formspec(pos, page + 32, inv_name, page_max))
-		elseif fields.prev then
-			if page - 32 < 1 then
-				return
-			end
-			meta:set_int("page", page - 32)
-			meta:set_string("formspec", chest_formspec(pos, page - 32, inv_name, page_max))
-		elseif fields.search or fields.key_enter_field == "filter" then
-			inv:set_size("search", 0)
-			if fields.filter == "" then
-				meta:set_int("page", 1)
-				meta:set_string("inv_name", "main")
-				meta:set_string("formspec", chest_formspec(pos, 1, "main", page_max))
-			else
-				local tab = {}
-				for i = 1, microexpansion.get_cell_size(cell_stack:get_name()) do
-					local match = inv:get_stack("main", i):get_name():find(fields.filter)
-					if match then
-						tab[#tab + 1] = inv:get_stack("main", i)
+		end
+		local cell_idx = next(cells)
+		local items_in_cell_count = 0
+		local cell_items = {}
+		if cell_idx == nil then
+			minetest.log("warning","too many items to store in drive")
+			return stack:get_count()
+		end
+
+		for i = 1, ctrl_inv:get_size("main") do
+			local stack_inside = ctrl_inv:get_stack("main", i)
+			local stack_name = stack_inside:get_name()
+			if stack_name ~= "" then
+				local item_count = stack_inside:get_count()
+				while item_count ~= 0 and cell_idx ~= nil do
+					local size = microexpansion.get_cell_size(cells[cell_idx]:get_name())
+					if size < items_in_cell_count + item_count then
+						local rest = size - items_in_cell_count
+						item_count = item_count - rest
+						table.insert(cell_items,stack_name.." "..rest)
+						items_in_cell_count = items_in_cell_count + rest
+
+						own_inv:set_stack("main", cell_idx, write_to_cell(cells[cell_idx],cell_items,items_in_cell_count))
+						items_in_cell_count = 0
+						cell_items = {}
+						cell_idx = next(cells, cell_idx)
+						if cell_idx == nil then
+							minetest.log("info","too many items to store in drive")
+						end
+					else
+						items_in_cell_count = items_in_cell_count + item_count
+						table.insert(cell_items,stack_inside:to_string())
+						item_count = 0
 					end
 				end
-				inv:set_list("search", tab)
-				meta:set_int("page", 1)
-				meta:set_string("inv_name", "search")
-				meta:set_string("formspec", chest_formspec(pos, 1, "search", page_max, fields.filter))
 			end
-		elseif fields.clear then
-			inv:set_size("search", 0)
-			meta:set_int("page", 1)
-			meta:set_string("inv_name", "main")
-			meta:set_string("formspec", chest_formspec(pos, 1, "main", page_max))
-		elseif fields.tochest then
-			local pinv = minetest.get_inventory({type="player", name=sender:get_player_name()})
-			microexpansion.move_inv({ inv=pinv, name="main" }, { inv=inv, name="main" })
+			if cell_idx == nil then
+				break
+			end
 		end
+		while cell_idx ~= nil do
+			own_inv:set_stack("main", cell_idx, write_to_cell(cells[cell_idx],cell_items,items_in_cell_count))
+			items_in_cell_count = 0
+			cell_items = {}
+			cell_idx = next(cells, cell_idx)
+		end
+
+		return stack:get_count()
+	end,
+	on_metadata_inventory_take = function(pos, listname, index, stack, player)
+		local network,cp = me.get_connected_network(pos)
+		if network == nil then
+			return
+		end
+		local ctrl_meta = minetest.get_meta(cp)
+		local ctrl_inv = ctrl_meta:get_inventory()
+		local items = minetest.deserialize(stack:get_meta():get_string("items"))
+		if items == nil then
+			me.update_connected_machines(pos)
+			return
+		end
+		for _,stack in pairs(items) do
+			--this returns 99 (max count) even if it removes more
+			ctrl_inv:remove_item("main", stack)
+		end
+		print(stack:to_string())
+
+		me.update_connected_machines(pos)
 	end,
 })

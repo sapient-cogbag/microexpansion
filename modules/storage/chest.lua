@@ -8,24 +8,39 @@ local function chest_formspec(pos, start_id, listname, page_max, query)
 	local page_number = ""
 	local buttons = ""
 	local query = query or ""
+	local net,cp = me.get_connected_network(pos)
 
-	if not listname then
-		list = "label[3,2;" .. minetest.colorize("red", "No drive!") .. "]"
+	if cp then
+		if listname and net:get_item_capacity() > 0 then
+			if listname == "main" then
+				list = "list[nodemeta:"..cp.x..","..cp.y..","..cp.z..";" .. listname .. ";0,0.3;8,4;" .. (start_id - 1) .. "]"
+			else
+				list = "list[context;" .. listname .. ";0,0.3;8,4;" .. (start_id - 1) .. "]"
+			end
+			list = list .. [[
+				list[current_player;main;0,5.5;8,1;]
+				list[current_player;main;0,6.73;8,3;8]
+				listring[nodemeta:]]..cp.x..","..cp.y..","..cp.z..[[;main]
+				listring[current_player;main]
+			]]
+			buttons = [[
+				button[3.56,4.35;1.8,0.9;tochest;To Drive]
+				tooltip[tochest;Move everything from your inventory to the ME network.]
+				button[5.4,4.35;0.8,0.9;prev;<]
+				button[7.25,4.35;0.8,0.9;next;>]
+				tooltip[prev;Previous]
+				tooltip[next;Next]
+				field[0.29,4.6;2.2,1;filter;;]]..query..[[]
+				button[2.1,4.5;0.8,0.5;search;?]
+				button[2.75,4.5;0.8,0.5;clear;X]
+				tooltip[search;Search]
+				tooltip[clear;Reset]
+			]]
+		else
+			list = "label[3,2;" .. minetest.colorize("red", "No connected drives!") .. "]"
+		end
 	else
-		list = "list[current_name;" .. listname .. ";0,0.3;8,4;" .. (start_id - 1) .. "]"
-		buttons = [[
-			button[3.56,4.35;1.8,0.9;tochest;To Drive]
-			tooltip[tochest;Move everything from your inventory to the ME network.]
-			button[5.4,4.35;0.8,0.9;prev;<]
-			button[7.25,4.35;0.8,0.9;next;>]
-			tooltip[prev;Previous]
-			tooltip[next;Next]
-			field[0.29,4.6;2.2,1;filter;;]]..query..[[]
-			button[2.1,4.5;0.8,0.5;search;?]
-			button[2.75,4.5;0.8,0.5;clear;X]
-			tooltip[search;Search]
-			tooltip[clear;Reset]
-		]]
+		list = "label[3,2;" .. minetest.colorize("red", "No connected network!") .. "]"
 	end
 	if page_max then
 		page_number = "label[6.15,4.5;" .. math.floor((start_id / 32)) + 1 ..
@@ -40,10 +55,6 @@ local function chest_formspec(pos, start_id, listname, page_max, query)
 		list ..
 	[[
 		label[0,-0.23;ME Chest]
-		list[current_player;main;0,5.5;8,1;]
-		list[current_player;main;0,6.73;8,3;8]
-		listring[current_name;main]
-		listring[current_player;main]
 		field_close_on_enter[filter;false]
 	]]..
 		page_number ..
@@ -55,18 +66,13 @@ local function update_chest(pos)
 	local meta = minetest.get_meta(pos)
 	local inv = meta:get_inventory()
 	if network == nil then
-		inv:set_size("main", 0)
 		meta:set_int("page", 1)
 		meta:set_string("formspec", chest_formspec(pos, 1))
 		return
 	end
-	local items = network.items
-	local size = network.item_capacity
+	local size = network:get_item_capacity()
 	local page_max = me.int_to_pagenum(size) + 1
-	inv:set_size("main", me.int_to_stacks(size))
-	if items then
-		inv:set_list("main", items)
-	end
+	
 	meta:set_string("inv_name", "main")
 	meta:set_string("formspec", chest_formspec(pos, 1, "main", page_max))
 end
@@ -98,77 +104,30 @@ microexpansion.register_node("chest", {
 			update_chest(pos)
 		end
 	end,
-	can_dig = function(pos, player)
-		local meta = minetest.get_meta(pos)
-		local inv = meta:get_inventory()
-		return inv:is_empty("main")
-	end,
-	allow_metadata_inventory_put = function(pos, listname, index, stack, player)
-		if listname == "main" then
-			local inv = minetest.get_meta(pos):get_inventory()
-			local max_slots = inv:get_size(listname)
-			local max_items = math.floor(max_slots * 99)
-
-			local slots, items = 0, 0
-			-- Get amount of items in drive
-			for i = 1, max_items do
-				local stack = inv:get_stack("main", i)
-				local item = stack:get_name()
-				if item ~= "" then
-					slots = slots + 1
-					local num = stack:get_count()
-					if num == 0 then num = 1 end
-					items = items + num
-				end
-			end
-
-			return math.min(stack:get_count(),max_items-items)
-		else
-			return 0
-		end
-	end,
-	on_metadata_inventory_put = function(pos, listname, index, stack, player)
-		if listname == "main" then
-			local inv = minetest.get_meta(pos):get_inventory()
-			inv:remove_item(listname, stack)
-			local stackname = stack:get_name()
-			local found = false
-			for i = 0, inv:get_size(listname) do
-				local inside = inv:get_stack(listname, i)
-				if inside:get_name() == stackname then
-					inside:set_count(inside:get_count() + stack:get_count())
-					inv:set_stack(listname, i, inside)
-					found = true
-					break;
-				end
-			end
-			if not found then
-				inv:add_item(listname, stack)
-			end
-			local network = me.get_connected_network(pos)
-			network.items = inv:get_list("main")
-			me.update_connected_machines(pos)
-		end
-	end,
-	allow_metadata_inventory_take = function(pos, listname, index, stack, player)
-		return math.min(stack:get_count(),stack:get_stack_max())
-	end,
 	on_metadata_inventory_take = function(pos, listname, index, stack, player)
-		local inv = minetest.get_meta(pos):get_inventory()
 		if listname == "search" then
+			local _,cp = me.get_connected_network(pos)
+			local inv = minetest.get_meta(cp):get_inventory()
 			inv:remove_item("main", stack)
 		end
-		local network = me.get_connected_network(pos)
-		network.items = inv:get_list("main")
-		me.update_connected_machines(pos)
 	end,
 	on_receive_fields = function(pos, formname, fields, sender)
+		local network,cp = me.get_connected_network(pos)
 		local meta = minetest.get_meta(pos)
 		local page = meta:get_int("page")
 		local inv_name = meta:get_string("inv_name")
-		local inv = meta:get_inventory()
-		local page_max = math.floor(inv:get_size("main") / 32) + 1
-		local network = me.get_connected_network(pos)
+		local own_inv = meta:get_inventory()
+		local ctrl_inv
+		if cp then
+			ctrl_inv = minetest.get_meta(cp):get_inventory()
+		end
+		local inv
+		if inv_name == "main" then
+			inv = ctrl_inv
+		else
+			inv = own_inv
+		end
+		local page_max = math.floor(inv:get_size(inv_name) / 32) + 1
 		if inv_name == "none" then
 			return
 		end
@@ -185,32 +144,32 @@ microexpansion.register_node("chest", {
 			meta:set_int("page", page - 32)
 			meta:set_string("formspec", chest_formspec(pos, page - 32, inv_name, page_max))
 		elseif fields.search or fields.key_enter_field == "filter" then
-			inv:set_size("search", 0)
+			own_inv:set_size("search", 0)
 			if fields.filter == "" then
 				meta:set_int("page", 1)
 				meta:set_string("inv_name", "main")
 				meta:set_string("formspec", chest_formspec(pos, 1, "main", page_max))
 			else
 				local tab = {}
-				for i = 1, inv:get_size("main") do
-					local match = inv:get_stack("main", i):get_name():find(fields.filter)
+				for i = 1, ctrl_inv:get_size("main") do
+					local match = ctrl_inv:get_stack("main", i):get_name():find(fields.filter)
 					if match then
-						tab[#tab + 1] = inv:get_stack("main", i)
+						tab[#tab + 1] = ctrl_inv:get_stack("main", i)
 					end
 				end
-				inv:set_list("search", tab)
+				own_inv:set_list("search", tab)
 				meta:set_int("page", 1)
 				meta:set_string("inv_name", "search")
 				meta:set_string("formspec", chest_formspec(pos, 1, "search", page_max, fields.filter))
 			end
 		elseif fields.clear then
-			inv:set_size("search", 0)
+			own_inv:set_size("search", 0)
 			meta:set_int("page", 1)
 			meta:set_string("inv_name", "main")
 			meta:set_string("formspec", chest_formspec(pos, 1, "main", page_max))
 		elseif fields.tochest then
 			local pinv = minetest.get_inventory({type="player", name=sender:get_player_name()})
-			microexpansion.move_inv({ inv=pinv, name="main" }, { inv=inv, name="main" })
+			microexpansion.move_inv({ inv=pinv, name="main" }, { inv=ctrl_inv, name="main" })
 		end
 	end,
 })

@@ -11,6 +11,10 @@ local worldpath = microexpansion.worldpath -- Worldpath pointer
 microexpansion.gui_bg = "bgcolor[#080808BB;true]background[5,5;1,1;gui_formbg.png;true]"
 microexpansion.gui_slots = "listcolors[#00000069;#5A5A5A;#141318;#30434C;#FFF]"
 
+microexpansion.settings = {
+	huge_stacks = minetest.settings:get_bool("microexpansion_huge_stacks")
+}
+
 -- logger
 function microexpansion.log(content, log_type)
 	assert(content, "microexpansion.log: missing content")

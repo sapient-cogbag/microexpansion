@@ -58,14 +58,14 @@ function me.get_connected_network(start_pos)
 		if me.get_node(npos).name == "microexpansion:ctrl" then
 			local network = me.get_network(npos)
 			if network then
-				return network
+				return network,npos
 			end
 		end
 	end
 end
 
 function me.update_connected_machines(start_pos)
-	--print("updating connected machines")
+	print("updating connected machines")
 	for npos in me.connected_nodes(start_pos) do
 		me.update_node(npos)
 	end

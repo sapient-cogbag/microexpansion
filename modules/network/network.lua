@@ -3,23 +3,18 @@
 -- @field #table controller_pos the position of the controller
 -- @field #number power_load the power currently provided to the network
 -- @field #number power_storage the power that can be stored for the next tick
--- @field #table items the itemstacks stored in the networks drives
--- @field #number item_capacity the amount of items that can be stored in the networks drives
 local network = {
 	power_load = 0,
-	power_storage = 0,
-	--for testing it's at 3200 will be set to 0 when the drives work
-	item_capacity = 3200,
+	power_storage = 0
 }
 microexpansion.network = network
 
 --- construct a new network
 -- @function [parent=#network] new
 -- @param #table o the object to become a network or nil
+-- @return #table the new network object
 function network:new(o)
-	local n = setmetatable(o or {}, {__index = self})
-	o.items = {}
-	return o
+	return setmetatable(o or {}, {__index = self})
 end
 
 --- check if a node can be connected
@@ -104,4 +99,31 @@ end
 -- @function [parent=#network] remove_overload
 function network:remove_overload()
 	self.power_load = math.min(self.power_load, self.power_storage)
+end
+
+--- get a drives item capacity
+-- @function get_drive_capacity
+-- @param #table pos the position of the drive
+-- @return #number the number of items that can be stored in the drive
+local function get_drive_capacity(pos)
+	local cap = 0
+	local meta = minetest.get_meta(pos)
+	local inv = meta:get_inventory()
+	for i = 1, inv:get_size("main") do
+		cap = cap + microexpansion.get_cell_size(inv:get_stack("main", i):get_name())
+	end
+	return cap
+end
+
+--- get the item capacity of a network
+-- @function [parent=#network] get_item_capacity
+-- @return #number the total number of items that can be stored in the network
+function network:get_item_capacity()
+	local cap = 0
+	for npos in microexpansion.connected_nodes(self.controller_pos) do
+		if microexpansion.get_node(npos).name == "microexpansion:drive" then
+			cap = cap + get_drive_capacity(npos)
+		end
+	end
+	return cap
 end

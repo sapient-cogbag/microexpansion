@@ -1,0 +1,2 @@
+#Stack items in networks higher than their max size.
+microexpansion_huge_stacks (huge stacks) bool true
