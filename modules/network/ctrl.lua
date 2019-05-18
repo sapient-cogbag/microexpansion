@@ -5,6 +5,10 @@ local network = me.network
 
 local function update_ctrl(pos,node)
 	local network = me.get_network(pos)
+	if network == nil then
+		minetest.log("error","no network for ctrl at pos "..minetest.pos_to_string(pos))
+		return
+	end
 	local size = network:get_item_capacity()
 	local meta = minetest.get_meta(pos)
 	local inv = meta:get_inventory()

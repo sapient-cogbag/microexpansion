@@ -54,7 +54,7 @@ local function chest_formspec(pos, start_id, listname, page_max, query)
 		microexpansion.gui_slots ..
 		list ..
 	[[
-		label[0,-0.23;ME Chest]
+		label[0,-0.23;ME Terminal]
 		field_close_on_enter[filter;false]
 	]]..
 		page_number ..
@@ -78,8 +78,8 @@ local function update_chest(pos)
 end
 
 -- [me chest] Register node
-microexpansion.register_node("chest", {
-	description = "ME Chest",
+microexpansion.register_node("term", {
+	description = "ME Terminal",
 	usedfor = "Can interact with storage cells in ME networks",
 	tiles = {
 		"chest_top",
