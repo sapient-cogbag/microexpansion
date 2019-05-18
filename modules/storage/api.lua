@@ -56,7 +56,7 @@ function microexpansion.move_inv(inv1, inv2)
 	local fname, tname = inv1.name, inv2.name
 
 	--FIXME only as many as allowed in a drive
-	for i,v in ipairs(finv:get_list(fname) or {}) do
+	for _,v in ipairs(finv:get_list(fname) or {}) do
 		if tinv and tinv:room_for_item(tname, v) then
 			local leftover = tinv:add_item( tname, v )
 			finv:remove_item(fname, v)

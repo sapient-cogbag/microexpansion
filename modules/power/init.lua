@@ -2,11 +2,9 @@
 
 local me = microexpansion
 
-local networks = me.networks
 local path     = microexpansion.get_module_path("power")
 
 me.power = {}
-local power = me.power
 
 -- Load Resources
 

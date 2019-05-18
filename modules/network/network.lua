@@ -43,14 +43,14 @@ function network.adjacent_connected_nodes(pos, include_ctrl)
 
 	local nodes = {}
 
-	for _,pos in pairs(adjacent) do
-		if network.can_connect(pos) then
+	for _,apos in pairs(adjacent) do
+		if network.can_connect(apos) then
 			if include_ctrl == false then
-				if not microexpansion.get_node(pos).name == "microexpansion:ctrl" then
-					table.insert(nodes, pos)
+				if not microexpansion.get_node(apos).name == "microexpansion:ctrl" then
+					table.insert(nodes, apos)
 				end
 			else
-				table.insert(nodes, pos)
+				table.insert(nodes, apos)
 			end
 		end
 	end

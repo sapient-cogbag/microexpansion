@@ -3,13 +3,13 @@
 local me = microexpansion
 local network = me.network
 
-local function update_ctrl(pos,node)
-	local network = me.get_network(pos)
-	if network == nil then
+local function update_ctrl(pos)
+	local cnetwork = me.get_network(pos)
+	if cnetwork == nil then
 		minetest.log("error","no network for ctrl at pos "..minetest.pos_to_string(pos))
 		return
 	end
-	local size = network:get_item_capacity()
+	local size = cnetwork:get_item_capacity()
 	local meta = minetest.get_meta(pos)
 	local inv = meta:get_inventory()
 	inv:set_size("main", me.int_to_stacks(size))
@@ -97,8 +97,7 @@ me.register_node("ctrl", {
 		meta:set_string("infotext", "Network Controller (owned by "..name..")")
 		meta:set_string("owner", name)
 	end,
-	on_destruct = function(pos, player)
-		local meta = minetest.get_meta(pos)
+	on_destruct = function(pos)
 		local net,idx = me.get_network(pos)
 		if net then
 			net.controller_pos = nil
@@ -110,7 +109,7 @@ me.register_node("ctrl", {
 	after_dig_node = function(pos)
 		me.update_connected_machines(pos)
 	end,
-	allow_metadata_inventory_put = function(pos, listname, index, stack, player)
+	allow_metadata_inventory_put = function(pos, listname, index, stack)
 		local inv = minetest.get_meta(pos):get_inventory()
 		local inside_stack = inv:get_stack(listname, index)
 		local stack_name = stack:get_name()
@@ -126,22 +125,22 @@ me.register_node("ctrl", {
 		local slots, items = 0, 0
 		-- Get amount of items in drive
 		for i = 1, max_slots do
-			local stack = inv:get_stack("main", i)
-			if stack:get_name() ~= "" then
+			local dstack = inv:get_stack("main", i)
+			if dstack:get_name() ~= "" then
 				slots = slots + 1
-				local num = stack:get_count()
+				local num = dstack:get_count()
 				if num == 0 then num = 1 end
 				items = items + num
 			end
 		end
 		return math.max(math.min(stack:get_count(),max_items-items),0)
 	end,
-	on_metadata_inventory_put = function(pos, listname, index, stack, player)
+	on_metadata_inventory_put = function(pos, listname, _, stack)
 		local inv = minetest.get_meta(pos):get_inventory()
 		inv:remove_item(listname, stack)
 		me.insert_item(stack, inv, listname)
 	end,
-	allow_metadata_inventory_take = function(pos, listname, index, stack, player)
+	allow_metadata_inventory_take = function(_, _, _, stack)
 		return math.min(stack:get_count(),stack:get_stack_max())
 	end,
 	machine = {

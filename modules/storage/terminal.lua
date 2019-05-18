@@ -3,11 +3,11 @@
 local me = microexpansion
 
 -- [me chest] Get formspec
-local function chest_formspec(pos, start_id, listname, page_max, query)
+local function chest_formspec(pos, start_id, listname, page_max, q)
 	local list
 	local page_number = ""
 	local buttons = ""
-	local query = query or ""
+	local query = q or ""
 	local net,cp = me.get_connected_network(pos)
 
 	if cp then
@@ -64,7 +64,6 @@ end
 local function update_chest(pos)
 	local network = me.get_connected_network(pos)
 	local meta = minetest.get_meta(pos)
-	local inv = meta:get_inventory()
 	if network == nil then
 		meta:set_int("page", 1)
 		meta:set_string("formspec", chest_formspec(pos, 1))
@@ -72,7 +71,7 @@ local function update_chest(pos)
 	end
 	local size = network:get_item_capacity()
 	local page_max = me.int_to_pagenum(size) + 1
-	
+
 	meta:set_string("inv_name", "main")
 	meta:set_string("formspec", chest_formspec(pos, 1, "main", page_max))
 end
@@ -104,15 +103,15 @@ microexpansion.register_node("term", {
 			update_chest(pos)
 		end
 	end,
-	on_metadata_inventory_take = function(pos, listname, index, stack, player)
+	on_metadata_inventory_take = function(pos, listname, _, stack)
 		if listname == "search" then
 			local _,cp = me.get_connected_network(pos)
 			local inv = minetest.get_meta(cp):get_inventory()
 			inv:remove_item("main", stack)
 		end
 	end,
-	on_receive_fields = function(pos, formname, fields, sender)
-		local network,cp = me.get_connected_network(pos)
+	on_receive_fields = function(pos, _, fields, sender)
+		local _,cp = me.get_connected_network(pos)
 		local meta = minetest.get_meta(pos)
 		local page = meta:get_int("page")
 		local inv_name = meta:get_string("inv_name")

@@ -5,7 +5,6 @@ microexpansion.modpath   = minetest.get_modpath("microexpansion") -- Get modpath
 microexpansion.worldpath = minetest.get_worldpath()               -- Get worldpath
 
 local modpath   = microexpansion.modpath   -- Modpath pointer
-local worldpath = microexpansion.worldpath -- Worldpath pointer
 
 -- Formspec GUI related stuff
 microexpansion.gui_bg = "bgcolor[#080808BB;true]background[5,5;1,1;gui_formbg.png;true]"

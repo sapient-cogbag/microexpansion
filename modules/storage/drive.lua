@@ -54,19 +54,19 @@ microexpansion.register_node("drive", {
 		local inv = meta:get_inventory()
 		inv:set_size("main", 10)
 	end,
-	can_dig = function(pos, player)
+	can_dig = function(pos)
 		local meta = minetest.get_meta(pos)
 		local inv = meta:get_inventory()
 		return inv:is_empty("main")
 	end,
-	allow_metadata_inventory_put = function(pos, listname, index, stack, player)
+	allow_metadata_inventory_put = function(_, _, _, stack)
 		if minetest.get_item_group(stack:get_name(), "microexpansion_cell") ~= 0 then
 			return 1
 		else
 			return 0
 		end
 	end,
-	on_metadata_inventory_put = function(pos, listname, index, stack, player)
+	on_metadata_inventory_put = function(pos, _, _, stack)
 		me.update_connected_machines(pos)
 		local network,cp = me.get_connected_network(pos)
 		if network == nil then
@@ -94,7 +94,7 @@ microexpansion.register_node("drive", {
 			return stack:get_count()
 		end
 		local ctrl_meta = minetest.get_meta(cp)
-		local ctrl_inv = ctrl_meta:get_inventory()		
+		local ctrl_inv = ctrl_meta:get_inventory()
 		local cells = {}
 		for i = 1, own_inv:get_size("main") do
 			local cell = own_inv:get_stack("main", i)
@@ -151,7 +151,7 @@ microexpansion.register_node("drive", {
 
 		return stack:get_count()
 	end,
-	on_metadata_inventory_take = function(pos, listname, index, stack, player)
+	on_metadata_inventory_take = function(pos, _, _, stack)
 		local network,cp = me.get_connected_network(pos)
 		if network == nil then
 			return
@@ -163,9 +163,9 @@ microexpansion.register_node("drive", {
 			me.update_connected_machines(pos)
 			return
 		end
-		for _,stack in pairs(items) do
+		for _,ostack in pairs(items) do
 			--this returns 99 (max count) even if it removes more
-			ctrl_inv:remove_item("main", stack)
+			ctrl_inv:remove_item("main", ostack)
 		end
 		print(stack:to_string())
 

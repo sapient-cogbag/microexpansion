@@ -156,7 +156,7 @@ function microexpansion.get_node(pos)
 	local node = minetest.get_node_or_nil(pos)
 	if node then return node end
 	local vm = VoxelManip()
-	local MinEdge, MaxEdge = vm:read_from_map(pos, pos)
+	vm:read_from_map(pos, pos)
 	return minetest.get_node(pos)
 end
 
