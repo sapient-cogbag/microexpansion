@@ -28,7 +28,7 @@ me.register_machine("fuel_fired_generator", {
 	status = "unstable",
 	machine = {
 		type = "provider",
-		on_survey = function(pos)
+		on_survey = function() -- args: pos
 			--TODO: burn fuel
 			return 5 -- Generate 5 ME/tick
 		end,

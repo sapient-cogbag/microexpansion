@@ -80,12 +80,12 @@ microexpansion.register_node("drive", {
 			me.update_connected_machines(pos)
 			return
 		end
-		for _,stack in pairs(items) do
-			me.insert_item(stack, ctrl_inv, "main")
+		for _,s in pairs(items) do
+			me.insert_item(s, ctrl_inv, "main")
 		end
 		me.update_connected_machines(pos)
 	end,
-	allow_metadata_inventory_take = function(pos, listname, index, stack, player)
+	allow_metadata_inventory_take = function(pos,_,_,stack) --args: pos, listname, index, stack, player
 		--FIXME sometimes items vanish if one cell is filled
 		local meta = minetest.get_meta(pos)
 		local own_inv = meta:get_inventory()

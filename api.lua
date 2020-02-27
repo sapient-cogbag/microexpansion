@@ -1,6 +1,8 @@
 -- microexpansion/api.lua
 local BASENAME = "microexpansion"
 
+--FIXME: this is very full of bad coding
+
 -- [function] Register Recipe
 function microexpansion.register_recipe(output, recipe)
 	-- Check if disabled
@@ -33,36 +35,26 @@ function microexpansion.register_recipe(output, recipe)
 		minetest.register_craft(def)
 	end
 
-	for _, i in ipairs(recipe) do
-		-- Check if disabled
-		if recipe.disabled == true then
-			return
-		end
+	-- Check if disabled
+  if recipe.disabled == true then
+    return
+  end
 
-		register(_)
+	for i in ipairs(recipe) do
+		register(i)
 	end
 end
 
 -- [function] Register oredef
-function microexpansion.register_oredef(ore, def)
+function microexpansion.register_oredef(ore, defs)
 	-- Check if disabled
-	if def.disabled == true then
+	if defs.disabled == true then
 		return
 	end
 
-	local function register(_)
-		local def = def[_]
-		def.ore = "microexpansion:"..ore
-		minetest.register_ore(def)
-	end
-
-	for _, i in ipairs(def) do
-		-- Check if disabled
-		if def.disabled == true then
-			return
-		end
-
-		register(_)
+	for _,d in ipairs(defs) do
+		d.ore = "microexpansion:"..ore
+    minetest.register_ore(d)
 	end
 end
 

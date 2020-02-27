@@ -7,15 +7,6 @@ local power = me.power
 --- Helper Functions
 ---
 
--- [local function] Renumber table
-local function renumber_table(t)
-	local result = {}
-	for _, value in pairs(t) do
-		table.insert(result,value)
-	end
-	return result
-end
-
 -- [local function] Get netitem by position
 local function get_netitem_by_pos(list, pos)
 	for _, i in pairs(list) do
@@ -53,7 +44,6 @@ function power.trace(pos)
 	local meta  = minetest.get_meta(netpos)
 	local netid = meta:get_string("network_id")
 	local list  = {}
-	local demand
 
 	local delete = false
 	if meta:get_string("network_ignore") == "true" then
@@ -61,9 +51,9 @@ function power.trace(pos)
 	end
 
 	-- [local function] Indexed
-	local function indexed(pos)
+	local function indexed(p)
 		for _, i in pairs(list) do
-			if vector.equals(pos, i.pos) then
+			if vector.equals(p, i.pos) then
 				return true
 			end
 		end
@@ -71,23 +61,23 @@ function power.trace(pos)
 
 	-- [local function] Trace
 	local function trace(nodes)
-		for _, pos in pairs(nodes) do
-			if not indexed(pos) then
-				local machine = minetest.get_meta(pos)
+		for _, p in pairs(nodes) do
+			if not indexed(p) then
+				local machine = minetest.get_meta(p)
 				if machine:get_string("network_ignore") ~= "true" then
-					local node = me.get_node(pos).name
+					local node = me.get_node(p).name
 					local desc = minetest.registered_nodes[node].description
 					if delete then
 						machine:set_string("network_id", nil)
 						machine:set_string("infotext", desc.."\nNo Network")
-						me.network_set_demand(pos, 0)
+						me.network_set_demand(p, 0)
 					else
 						machine:set_string("network_id", netid)
 						machine:set_string("infotext", desc.."\nNetwork ID: "..netid)
 					end
 
-					list[#list + 1] = { pos = pos, demand = machine:get_int("demand") }
-					trace(power.get_connected_nodes(pos, false))
+					list[#list + 1] = { pos = p, demand = machine:get_int("demand") }
+					trace(power.get_connected_nodes(p, false))
 				end
 			end
 		end
