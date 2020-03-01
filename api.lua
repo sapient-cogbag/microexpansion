@@ -1,8 +1,6 @@
 -- microexpansion/api.lua
 local BASENAME = "microexpansion"
 
---FIXME: this is very full of bad coding
-
 -- [function] Register Recipe
 function microexpansion.register_recipe(output, recipe)
 	-- Check if disabled
@@ -10,38 +8,13 @@ function microexpansion.register_recipe(output, recipe)
 		return
 	end
 
-	local function isint(n)
-		return n==math.floor(n)
-	end
-
-	local function get_amount(_)
-		if isint(recipe[_][1]) then
-			return recipe[_][1]
-		else return 1 end
-	end
-
-	local function get_type(_)
-		if type(recipe[_][2]) == "string" then
-			return recipe[_][2]
-		end
-	end
-
-	local function register(_)
+	for _,r in ipairs(recipe) do
 		local def = {
-			type   = get_type(_),
-			output = output.." "..tostring(get_amount(_)),
-			recipe = recipe[_][3] or recipe[_][2]
-		}
-		minetest.register_craft(def)
-	end
-
-	-- Check if disabled
-  if recipe.disabled == true then
-    return
-  end
-
-	for i in ipairs(recipe) do
-		register(i)
+      type   = type(r[2]) == "string" and r[2],
+      output = output.." "..(r[1] or 1),
+      recipe = r[3] or r[2]
+    }
+    minetest.register_craft(def)
 	end
 end
 

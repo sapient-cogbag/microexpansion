@@ -9,6 +9,7 @@ end
 local function write_to_cell(cell, items, item_count)
 	local size = microexpansion.get_cell_size(cell:get_name())
 	local item_meta = cell:get_meta()
+	--print(dump2(items,"cell_items"))
 	item_meta:set_string("items", minetest.serialize(items))
 	local base_desc = minetest.registered_craftitems[cell:get_name()].microexpansion.base_desc
 	-- Calculate Percentage
@@ -68,48 +69,44 @@ microexpansion.register_node("drive", {
 	end,
 	on_metadata_inventory_put = function(pos, _, _, stack)
 		me.update_connected_machines(pos)
-		local network,cp = me.get_connected_network(pos)
+		local network = me.get_connected_network(pos)
 		if network == nil then
 			return
 		end
-		local ctrl_meta = minetest.get_meta(cp)
-		local ctrl_inv = ctrl_meta:get_inventory()
+		local ctrl_inv = network:get_inventory()
 		local items = minetest.deserialize(stack:get_meta():get_string("items"))
 		if items == nil then
 			print("no items")
 			me.update_connected_machines(pos)
 			return
 		end
+		network:add_storage_slots(#items)
 		for _,s in pairs(items) do
 			me.insert_item(s, ctrl_inv, "main")
 		end
 		me.update_connected_machines(pos)
 	end,
 	allow_metadata_inventory_take = function(pos,_,_,stack) --args: pos, listname, index, stack, player
-		--FIXME sometimes items vanish if one cell is filled
 		local meta = minetest.get_meta(pos)
 		local own_inv = meta:get_inventory()
-		local network,cp = me.get_connected_network(pos)
+		local network = me.get_connected_network(pos)
 		if network == nil then
 			return stack:get_count()
 		end
-		local ctrl_meta = minetest.get_meta(cp)
-		local ctrl_inv = ctrl_meta:get_inventory()
+		local ctrl_inv = network:get_inventory()
 		local cells = {}
 		for i = 1, own_inv:get_size("main") do
 			local cell = own_inv:get_stack("main", i)
 			local name = cell:get_name()
 			if name ~= "" then
-				table.insert(cells, i, cell)
+				cells[i] = cell
 			end
 		end
 		local cell_idx = next(cells)
+		local size = microexpansion.get_cell_size(cells[cell_idx]:get_name())
 		local items_in_cell_count = 0
 		local cell_items = {}
-		if cell_idx == nil then
-			minetest.log("warning","too many items to store in drive")
-			return stack:get_count()
-		end
+		assert(cell_idx,"cannot take a cell from an empty drive")
 
 		for i = 1, ctrl_inv:get_size("main") do
 			local stack_inside = ctrl_inv:get_stack("main", i)
@@ -117,18 +114,19 @@ microexpansion.register_node("drive", {
 			if stack_name ~= "" then
 				local item_count = stack_inside:get_count()
 				while item_count ~= 0 and cell_idx ~= nil do
-					local size = microexpansion.get_cell_size(cells[cell_idx]:get_name())
 					if size < items_in_cell_count + item_count then
-						local rest = size - items_in_cell_count
-						item_count = item_count - rest
-						table.insert(cell_items,stack_name.." "..rest)
-						items_in_cell_count = items_in_cell_count + rest
+						local space = size - items_in_cell_count
+						item_count = item_count - space
+						table.insert(cell_items,stack_name.." "..space)
+						items_in_cell_count = items_in_cell_count + space
 
 						own_inv:set_stack("main", cell_idx, write_to_cell(cells[cell_idx],cell_items,items_in_cell_count))
-						items_in_cell_count = 0
-						cell_items = {}
 						cell_idx = next(cells, cell_idx)
-						if cell_idx == nil then
+						size = microexpansion.get_cell_size(cells[cell_idx]:get_name())
+            items_in_cell_count = 0
+            cell_items = {}
+            if cell_idx == nil then
+              --there may be other drives within the network
 							minetest.log("info","too many items to store in drive")
 						end
 					else
@@ -152,14 +150,14 @@ microexpansion.register_node("drive", {
 		return stack:get_count()
 	end,
 	on_metadata_inventory_take = function(pos, _, _, stack)
-		local network,cp = me.get_connected_network(pos)
+		local network = me.get_connected_network(pos)
 		if network == nil then
 			return
 		end
-		local ctrl_meta = minetest.get_meta(cp)
-		local ctrl_inv = ctrl_meta:get_inventory()
+		local ctrl_inv = network:get_inventory()
 		local items = minetest.deserialize(stack:get_meta():get_string("items"))
 		if items == nil then
+		  network:update()
 			me.update_connected_machines(pos)
 			return
 		end
@@ -169,6 +167,7 @@ microexpansion.register_node("drive", {
 		end
 		print(stack:to_string())
 
+    network:update()
 		me.update_connected_machines(pos)
 	end,
 })

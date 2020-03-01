@@ -46,7 +46,7 @@ end
 
 -- [function] Load module (overrides modules.conf)
 function microexpansion.load_module(name)
-	if loaded_modules[name] ~= false then
+	if not loaded_modules[name] then
 		local module_path = microexpansion.get_module_path(name)
 
 		if module_path then

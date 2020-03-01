@@ -12,15 +12,17 @@ local function chest_formspec(pos, start_id, listname, page_max, q)
 
 	if cp then
 		if listname and net:get_item_capacity() > 0 then
+		  local ctrlinvname = net:get_inventory_name()
 			if listname == "main" then
-				list = "list[nodemeta:"..cp.x..","..cp.y..","..cp.z..";" .. listname .. ";0,0.3;8,4;" .. (start_id - 1) .. "]"
+				list = "list[detached:"..ctrlinvname..";"
+				  .. listname .. ";0,0.3;8,4;" .. (start_id - 1) .. "]"
 			else
 				list = "list[context;" .. listname .. ";0,0.3;8,4;" .. (start_id - 1) .. "]"
 			end
 			list = list .. [[
 				list[current_player;main;0,5.5;8,1;]
 				list[current_player;main;0,6.73;8,3;8]
-				listring[nodemeta:]]..cp.x..","..cp.y..","..cp.z..[[;main]
+				listring[detached:]]..ctrlinvname..[[;main]
 				listring[current_player;main]
 			]]
 			buttons = [[
@@ -76,6 +78,9 @@ local function update_chest(pos)
 	meta:set_string("formspec", chest_formspec(pos, 1, "main", page_max))
 end
 
+--FIXME: items inserted in a search inventory vanish
+--TODO: add a main inv that transfers to the network
+
 -- [me chest] Register node
 microexpansion.register_node("term", {
 	description = "ME Terminal",
@@ -105,26 +110,44 @@ microexpansion.register_node("term", {
 	end,
 	on_metadata_inventory_take = function(pos, listname, _, stack)
 		if listname == "search" then
-			local _,cp = me.get_connected_network(pos)
-			local inv = minetest.get_meta(cp):get_inventory()
+			local net = me.get_connected_network(pos)
+			local inv = net:get_inventory()
 			inv:remove_item("main", stack)
 		end
 	end,
 	on_receive_fields = function(pos, _, fields, sender)
-		local _,cp = me.get_connected_network(pos)
+		local net,cp = me.get_connected_network(pos)
+		if net then
+		  if cp then
+		    minetest.log("none","network and ctrl_pos")
+	    else
+	     minetest.log("warning","network but no ctrl_pos")
+		  end
+		else
+		  if cp then
+		    minetest.log("warning","no network but ctrl_pos")
+		  else
+		    minetest.log("info","no network and no ctrl_pos")
+		  end
+		end
 		local meta = minetest.get_meta(pos)
 		local page = meta:get_int("page")
 		local inv_name = meta:get_string("inv_name")
 		local own_inv = meta:get_inventory()
 		local ctrl_inv
 		if cp then
-			ctrl_inv = minetest.get_meta(cp):get_inventory()
+			ctrl_inv = net:get_inventory()
+		else
+		  minetest.log("warning","no network connected")
+		  return
 		end
 		local inv
 		if inv_name == "main" then
 			inv = ctrl_inv
+			assert(inv,"no control inv")
 		else
 			inv = own_inv
+			assert(inv,"no own inv")
 		end
 		local page_max = math.floor(inv:get_size(inv_name) / 32) + 1
 		if inv_name == "none" then
@@ -168,7 +191,9 @@ microexpansion.register_node("term", {
 			meta:set_string("formspec", chest_formspec(pos, 1, "main", page_max))
 		elseif fields.tochest then
 			local pinv = minetest.get_inventory({type="player", name=sender:get_player_name()})
+			net:add_storage_slots(pinv:get_size("main"))
 			microexpansion.move_inv({ inv=pinv, name="main" }, { inv=ctrl_inv, name="main" })
+			net:add_storage_slots(true)
 		end
 	end,
 })

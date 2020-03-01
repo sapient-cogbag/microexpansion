@@ -13,17 +13,28 @@ microexpansion.network = network
 -- @function [parent=#network] new
 -- @param #table o the object to become a network or nil
 -- @return #table the new network object
-function network:new(o)
-	return setmetatable(o or {}, {__index = self})
+function network.new(o)
+	return setmetatable(o or {}, {__index = network})
 end
 
 --- check if a node can be connected
 -- @function [parent=#network] can_connect
--- @param #table pos the position of the node to be checked
+-- @param #table np the position of the node to be checked
+--   the node itself or the name of the node
 -- @return #boolean whether this node has the group me_connect
-function network.can_connect(pos)
-	local node = microexpansion.get_node(pos)
-	return minetest.get_item_group(node.name, "me_connect") > 0
+function network.can_connect(np)
+  local nn
+  if type(np)=="string" then
+    nn = np
+  else
+    if np.name then
+      nn = np.name
+    else
+      local node = microexpansion.get_node(np)
+      nn = node.name
+    end
+  end
+	return minetest.get_item_group(nn, "me_connect") > 0
 end
 
 --- get all adjacent connected nodes
@@ -44,15 +55,17 @@ function network.adjacent_connected_nodes(pos, include_ctrl)
 	local nodes = {}
 
 	for _,apos in pairs(adjacent) do
-		if network.can_connect(apos) then
-			if include_ctrl == false then
-				if not microexpansion.get_node(apos).name == "microexpansion:ctrl" then
-					table.insert(nodes, apos)
-				end
-			else
-				table.insert(nodes, apos)
+	 local napos = microexpansion.get_node(apos)
+	 local nn = napos.name
+	 if network.can_connect(nn) then
+		if include_ctrl == false then
+			if nn ~= "microexpansion:ctrl" then
+				table.insert(nodes,{pos = apos, name = nn})
 			end
+		else
+			table.insert(nodes,{pos = apos, name = nn})
 		end
+	 end
 	end
 
 	return nodes
@@ -125,5 +138,148 @@ function network:get_item_capacity()
 			cap = cap + get_drive_capacity(npos)
 		end
 	end
+	self.capacity_cache = cap
 	return cap
+end
+
+function network:add_storage_slots(count,listname)
+  local c = count or 1
+  local ln = listname or "main"
+  local inv = self:get_inventory()
+  local csize = inv:get_size(ln)
+  local space = 0
+  local inside = 0
+  local contents = inv:get_list(ln) or {}
+  for _,s in pairs(contents) do
+    if s:is_empty() then
+      space = space + 1
+    else
+      inside = inside + s:get_count()
+    end
+  end
+  local cap = self:get_item_capacity()
+  --the capacity is allocated outside of the condition because it updates the cached capacity
+  if count == true then
+    if inside < cap then
+      c = 1
+    else
+      c = 0
+    end
+  end
+  local needed = c - space
+  needed = needed + csize
+  --TODO allow list removal
+  if needed == 0 then
+    needed = 1
+  end
+  inv:set_size(ln, needed)
+end
+
+--FIXME: add size removal function because items are removed when size decreases
+
+function network:update()
+  self:add_storage_slots(true)
+end
+
+function network:get_inventory_name()
+  local cp = self.controller_pos
+  assert(cp, "trying to get inventory name of a network without controller")
+  return "microexpansion_storage_"..cp.x.."_"..cp.y.."_"..cp.z
+end
+
+local function create_inventory(net)
+  local invname = net:get_inventory_name()
+  net.inv = minetest.create_detached_inventory(invname, {
+    allow_put = function(inv, listname, index, stack)
+      local inside_stack = inv:get_stack(listname, index)
+      local stack_name = stack:get_name()
+      -- improve performance by skipping unnessecary calls
+      if inside_stack:get_name() ~= stack_name or inside_stack:get_count() >= inside_stack:get_stack_max()  then
+        if inv:get_stack(listname, index+1):get_name() ~= "" then
+          return stack:get_count()
+        end
+      end
+      local max_slots = inv:get_size(listname)
+      local max_items = net.capacity_cache
+
+      local slots, items = 0, 0
+      -- Get amount of items in drive
+      for i = 1, max_slots do
+        local dstack = inv:get_stack("main", i)
+        if dstack:get_name() ~= "" then
+          slots = slots + 1
+          local num = dstack:get_count()
+          if num == 0 then num = 1 end
+          items = items + num
+        end
+      end
+      return math.max(math.min(stack:get_count(),max_items-items),0)
+    end,
+    on_put = function(inv, listname, _, stack)
+      inv:remove_item(listname, stack)
+      microexpansion.insert_item(stack, inv, listname)
+      net:add_storage_slots(true)
+    end,
+    allow_take = function(_, _, _, stack)
+      return math.min(stack:get_count(),stack:get_stack_max())
+    end,
+    on_take = function()
+      net:add_storage_slots(true)
+    end
+  })
+end
+
+function network:get_inventory()
+  if not self.inv then
+    create_inventory(self)
+    assert(self.inv,"no inventory created")
+  end
+  return self.inv
+end
+
+function network:load_inventory(lists)
+  local inv = self:get_inventory()
+  for listname,c in pairs(lists) do
+    inv:set_size(listname, #c)
+    for i,s in pairs(c) do
+      inv:set_stack(listname,i,s)
+    end
+  end
+end
+
+function network:save_inventory()
+  local contents = {}
+  local lists = self.inv:get_lists()
+  for listname,c in pairs(lists or {}) do
+    local ct = {}
+    contents[listname] = ct
+    for i,stack in pairs(c) do
+      ct[i] = stack:to_string()
+    end
+  end
+  return contents
+end
+
+function network:load()
+  if self.strinv then
+    self:load_inventory(self.strinv)
+  end
+end
+
+function network:serialize()
+  local sert = {}
+  for i,v in pairs(self) do
+    if i == "inv" then
+      sert.strinv = self:save_inventory()
+    else
+      sert[i] = v
+    end
+  end
+  return sert
+end
+
+function network:destruct()
+  self.controller_pos = nil
+  self.inv = nil
+  minetest.remove_detached_inventory(self:get_inventory_name())
 end
