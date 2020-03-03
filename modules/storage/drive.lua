@@ -80,7 +80,7 @@ microexpansion.register_node("drive", {
 			me.update_connected_machines(pos)
 			return
 		end
-		network:add_storage_slots(#items)
+		network:set_storage_space(#items)
 		for _,s in pairs(items) do
 			me.insert_item(s, ctrl_inv, "main")
 		end
@@ -114,10 +114,10 @@ microexpansion.register_node("drive", {
 			if stack_name ~= "" then
 				local item_count = stack_inside:get_count()
 				while item_count ~= 0 and cell_idx ~= nil do
+				  --print(("stack to store: %s %i"):format(stack_name,item_count))
 					if size < items_in_cell_count + item_count then
 						local space = size - items_in_cell_count
-						item_count = item_count - space
-						table.insert(cell_items,stack_name.." "..space)
+						table.insert(cell_items,("%s %i"):format(stack_name,space))
 						items_in_cell_count = items_in_cell_count + space
 
 						own_inv:set_stack("main", cell_idx, write_to_cell(cells[cell_idx],cell_items,items_in_cell_count))
@@ -125,13 +125,14 @@ microexpansion.register_node("drive", {
 						size = microexpansion.get_cell_size(cells[cell_idx]:get_name())
             items_in_cell_count = 0
             cell_items = {}
+            item_count = item_count - space
             if cell_idx == nil then
               --there may be other drives within the network
 							minetest.log("info","too many items to store in drive")
 						end
 					else
 						items_in_cell_count = items_in_cell_count + item_count
-						table.insert(cell_items,stack_inside:to_string())
+						table.insert(cell_items, ("%s %i"):format(stack_name,item_count))
 						item_count = 0
 					end
 				end
@@ -165,7 +166,7 @@ microexpansion.register_node("drive", {
 			--this returns 99 (max count) even if it removes more
 			ctrl_inv:remove_item("main", ostack)
 		end
-		print(stack:to_string())
+		--print(stack:to_string())
 
     network:update()
 		me.update_connected_machines(pos)

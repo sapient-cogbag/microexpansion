@@ -51,18 +51,36 @@ function microexpansion.int_to_pagenum(int)
 end
 
 -- [function] Move items from inv to inv
-function microexpansion.move_inv(inv1, inv2)
-	local finv, tinv   = inv1.inv, inv2.inv
-	local fname, tname = inv1.name, inv2.name
+function microexpansion.move_inv(inv1, inv2, max)
+  if max <= 0 then return end
+  local finv, tinv   = inv1.inv, inv2.inv
+  local fname, tname = inv1.name, inv2.name
+  local huge = inv2.huge
+  local inserted = 0
 
-	--FIXME only as many as allowed in a drive
-	for _,v in ipairs(finv:get_list(fname) or {}) do
-		if tinv and tinv:room_for_item(tname, v) then
-			local leftover = tinv:add_item( tname, v )
-			finv:remove_item(fname, v)
-			if leftover and not(leftover:is_empty()) then
-				finv:add_item(fname, v)
-			end
+  for _,v in ipairs(finv:get_list(fname) or {}) do
+    local left = max-inserted
+    if left <= 0 then
+      break;
+    end
+    if not v:is_empty() then
+      if v:get_count() > left then
+        v = v:peek_item(left)
+      end
+  		if tinv and tinv:room_for_item(tname, v) then
+  		  if huge then
+  		    microexpansion.insert_item(v, tinv, tname)
+  		    finv:remove_item(fname, v)
+  	    else
+    			local leftover = tinv:add_item(tname, v)
+          finv:remove_item(fname, v)
+          if leftover and not(leftover:is_empty()) then
+            minetest.log("warning","leftover items when transfering inventory")
+  				  finv:add_item(fname, leftover)
+    			end
+  			end
+  			inserted = inserted + v:get_count()
+  		end
 		end
 	end
 end

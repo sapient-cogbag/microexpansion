@@ -3,11 +3,7 @@ me.networks    = {}
 local networks = me.networks
 local path     = microexpansion.get_module_path("network")
 
-function me.insert_item(stack, inv, listname)
-  if me.settings.huge_stacks == false then
-    inv:add_item(listname, stack)
-    return
-  end
+local function split_stack_values(stack)
   local stack_name
   local stack_count
   if type(stack) == "string" then
@@ -22,6 +18,14 @@ function me.insert_item(stack, inv, listname)
     stack_name = stack:get_name()
     stack_count = stack:get_count()
   end
+  return stack_name, stack_count
+end
+
+function me.insert_item(stack, inv, listname)
+  if me.settings.huge_stacks == false then
+    return inv:add_item(listname, stack)
+  end
+  local stack_name,stack_count = split_stack_values(stack)
   local found = false
   for i = 0, inv:get_size(listname) do
     local inside = inv:get_stack(listname, i)
@@ -40,7 +44,7 @@ function me.insert_item(stack, inv, listname)
     end
   end
   if not found then
-    inv:add_item(listname, stack)
+    return inv:add_item(listname, stack)
   end
 end
 

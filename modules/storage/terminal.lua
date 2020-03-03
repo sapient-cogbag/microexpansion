@@ -191,9 +191,16 @@ microexpansion.register_node("term", {
 			meta:set_string("formspec", chest_formspec(pos, 1, "main", page_max))
 		elseif fields.tochest then
 			local pinv = minetest.get_inventory({type="player", name=sender:get_player_name()})
-			net:add_storage_slots(pinv:get_size("main"))
-			microexpansion.move_inv({ inv=pinv, name="main" }, { inv=ctrl_inv, name="main" })
-			net:add_storage_slots(true)
+			net:set_storage_space(pinv:get_size("main"))
+			local space = net:get_item_capacity()
+      local contents = ctrl_inv:get_list("main") or {}
+      for _,s in pairs(contents) do
+        if not s:is_empty() then
+          space = space - s:get_count()
+        end
+      end
+			microexpansion.move_inv({ inv=pinv, name="main" }, { inv=ctrl_inv, name="main",huge=true }, space)
+			net:set_storage_space(true)
 		end
 	end,
 })

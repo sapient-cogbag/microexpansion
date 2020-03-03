@@ -7,7 +7,8 @@ local network = {
 	power_load = 0,
 	power_storage = 0
 }
-microexpansion.network = network
+local me = microexpansion
+me.network = network
 
 --- construct a new network
 -- @function [parent=#network] new
@@ -30,7 +31,7 @@ function network.can_connect(np)
     if np.name then
       nn = np.name
     else
-      local node = microexpansion.get_node(np)
+      local node = me.get_node(np)
       nn = node.name
     end
   end
@@ -55,7 +56,7 @@ function network.adjacent_connected_nodes(pos, include_ctrl)
 	local nodes = {}
 
 	for _,apos in pairs(adjacent) do
-	 local napos = microexpansion.get_node(apos)
+	 local napos = me.get_node(apos)
 	 local nn = napos.name
 	 if network.can_connect(nn) then
 		if include_ctrl == false then
@@ -123,7 +124,7 @@ local function get_drive_capacity(pos)
 	local meta = minetest.get_meta(pos)
 	local inv = meta:get_inventory()
 	for i = 1, inv:get_size("main") do
-		cap = cap + microexpansion.get_cell_size(inv:get_stack("main", i):get_name())
+		cap = cap + me.get_cell_size(inv:get_stack("main", i):get_name())
 	end
 	return cap
 end
@@ -133,8 +134,8 @@ end
 -- @return #number the total number of items that can be stored in the network
 function network:get_item_capacity()
 	local cap = 0
-	for npos in microexpansion.connected_nodes(self.controller_pos) do
-		if microexpansion.get_node(npos).name == "microexpansion:drive" then
+	for npos in me.connected_nodes(self.controller_pos) do
+		if me.get_node(npos).name == "microexpansion:drive" then
 			cap = cap + get_drive_capacity(npos)
 		end
 	end
@@ -142,7 +143,22 @@ function network:get_item_capacity()
 	return cap
 end
 
-function network:add_storage_slots(count,listname)
+local function remove_slots(inv,ln,target,csize)
+  for i = target, csize do
+    local s = inv:get_stack(ln,i)
+    if not s:is_empty() then
+      inv:set_stack(ln, i, "")
+      me.insert_item(s, inv, ln)
+    end
+  end
+  --perhaps allow list removal
+  if target < 0 then
+    target = 1
+  end
+  inv:set_size(ln, target)
+end
+
+function network:set_storage_space(count,listname)
   local c = count or 1
   local ln = listname or "main"
   local inv = self:get_inventory()
@@ -167,18 +183,17 @@ function network:add_storage_slots(count,listname)
     end
   end
   local needed = c - space
-  needed = needed + csize
-  --TODO allow list removal
-  if needed == 0 then
-    needed = 1
+  if needed > 0 then
+    needed = needed + csize
+    inv:set_size(ln, needed)
+  elseif needed < 0 then
+    needed = needed + csize
+    remove_slots(inv,ln,needed,csize)
   end
-  inv:set_size(ln, needed)
 end
 
---FIXME: add size removal function because items are removed when size decreases
-
 function network:update()
-  self:add_storage_slots(true)
+  self:set_storage_space(true)
 end
 
 function network:get_inventory_name()
@@ -217,14 +232,14 @@ local function create_inventory(net)
     end,
     on_put = function(inv, listname, _, stack)
       inv:remove_item(listname, stack)
-      microexpansion.insert_item(stack, inv, listname)
-      net:add_storage_slots(true)
+      me.insert_item(stack, inv, listname)
+      net:set_storage_space(true)
     end,
     allow_take = function(_, _, _, stack)
       return math.min(stack:get_count(),stack:get_stack_max())
     end,
     on_take = function()
-      net:add_storage_slots(true)
+      net:set_storage_space(true)
     end
   })
 end
