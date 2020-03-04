@@ -93,6 +93,14 @@ microexpansion.register_node("term", {
 		"chest_side",
 		"chest_front",
 	},
+	recipe = {
+    { 1, {
+        {"default:steel_ingot",   "default:chest",               "default:steel_ingot"},
+        {"default:steel_ingot", "microexpansion:machine_casing", "default:steel_ingot"},
+        {"default:steel_ingot", "microexpansion:cable",          "default:steel_ingot"},
+      },
+    }
+  },
 	is_ground_content = false,
 	groups = { cracky = 1, me_connect = 1 },
 	paramtype = "light",

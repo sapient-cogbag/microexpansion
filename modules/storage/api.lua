@@ -24,10 +24,7 @@ function microexpansion.register_cell(itemstring, def)
 
 	-- if recipe, register recipe
 	if def.recipe then
-		-- if recipe, register recipe
-		if def.recipe then
-			microexpansion.register_recipe(BASENAME..":"..itemstring, def.recipe)
-		end
+		microexpansion.register_recipe(BASENAME..":"..itemstring, def.recipe)
 	end
 end
 
@@ -67,20 +64,20 @@ function microexpansion.move_inv(inv1, inv2, max)
       if v:get_count() > left then
         v = v:peek_item(left)
       end
-  		if tinv and tinv:room_for_item(tname, v) then
-  		  if huge then
-  		    microexpansion.insert_item(v, tinv, tname)
-  		    finv:remove_item(fname, v)
-  	    else
-    			local leftover = tinv:add_item(tname, v)
+      if tinv and tinv:room_for_item(tname, v) then
+        if huge then
+          microexpansion.insert_item(v, tinv, tname)
+          finv:remove_item(fname, v)
+        else
+          local leftover = tinv:add_item(tname, v)
           finv:remove_item(fname, v)
           if leftover and not(leftover:is_empty()) then
             minetest.log("warning","leftover items when transfering inventory")
-  				  finv:add_item(fname, leftover)
-    			end
-  			end
-  			inserted = inserted + v:get_count()
-  		end
-		end
-	end
+            finv:add_item(fname, leftover)
+          end
+        end
+        inserted = inserted + v:get_count()
+      end
+    end
+  end
 end

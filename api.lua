@@ -64,35 +64,35 @@ function microexpansion.register_item(itemstring, def)
 	-- Register craftitem
 	minetest.register_craftitem(BASENAME..":"..itemstring, def)
 
-	-- if recipe, Register recipe
-	if def.recipe then
-		microexpansion.register_recipe(BASENAME..":"..itemstring, def.recipe)
-	end
+  -- if recipe, Register recipe
+  if def.recipe then
+    microexpansion.register_recipe(BASENAME..":"..itemstring, def.recipe)
+  end
 end
 
 -- [function] Register Node
 function microexpansion.register_node(itemstring, def)
-	-- Check if disabled
-	if def.disabled == true then
-		return
-	end
-	-- Set usedfor
-	if def.usedfor then
-		def.description = def.description .. "\n"..minetest.colorize("grey", def.usedfor)
-	end
-	-- Update texture
-	if def.auto_complete ~= false then
-		for _,i in ipairs(def.tiles) do
-			if #def.tiles[_]:split("^") <= 1 then
-				local prefix = ""
-				if def.type == "ore" then
-					prefix = "ore_"
-				end
+  -- Check if disabled
+  if def.disabled == true then
+    return
+  end
+  -- Set usedfor
+  if def.usedfor then
+    def.description = def.description .. "\n"..minetest.colorize("grey", def.usedfor)
+  end
+  -- Update texture
+  if def.auto_complete ~= false then
+    for i,n in ipairs(def.tiles) do
+      if #def.tiles[i]:split("^") <= 1 then
+        local prefix = ""
+        if def.type == "ore" then
+          prefix = "ore_"
+        end
 
-				def.tiles[_] = BASENAME.."_"..prefix..i..".png"
-			end
-		end
-	end
+        def.tiles[i] = BASENAME.."_"..prefix..n..".png"
+      end
+    end
+  end
 	-- Colour description
 	def.description = desc_colour(def.status, def.description)
 	-- Update connect_sides

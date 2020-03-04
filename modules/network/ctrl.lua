@@ -14,6 +14,14 @@ me.register_node("ctrl", {
 		"ctrl_sides",
 		"ctrl_sides"
 	},
+	recipe = {
+    { 1, {
+        {"default:steel_ingot", "microexpansion:steel_infused_obsidian_ingot", "default:steel_ingot"},
+        {"default:steel_ingot",       "microexpansion:machine_casing",         "default:steel_ingot"},
+        {"default:steel_ingot",             "microexpansion:cable",            "default:steel_ingot"},
+      },
+    }
+  },
 	drawtype = "nodebox",
 	paramtype = "light",
 	node_box = {
@@ -75,6 +83,12 @@ me.register_machine("cable", {
 	tiles = {
 		"cable",
 	},
+	recipe = {
+    { 12, "shapeless", {
+        "microexpansion:steel_infused_obsidian_ingot", "microexpansion:machine_casing"
+      },
+    }
+  },
 	drawtype = "nodebox",
 	node_box = {
 		type = "connected",

@@ -9,7 +9,7 @@ local me = microexpansion
 me.register_item("steel_infused_obsidian_ingot", {
 	description = "Steel Infused Obsidian Ingot",
 	recipe = {
-		{ 1, {
+		{ 2, {
 				{ "default:steel_ingot", "default:obsidian_shard", "default:steel_ingot" },
 			},
 		},

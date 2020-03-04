@@ -32,6 +32,14 @@ microexpansion.register_node("drive", {
 		"chest_side",
 		"drive_full",
 	},
+	recipe = {
+    { 1, {
+        {"default:steel_ingot",   "default:chest",               "default:steel_ingot" },
+        {"default:steel_ingot", "microexpansion:machine_casing", "default:steel_ingot" },
+        {"default:steel_ingot",        "default:chest",          "default:steel_ingot" },
+      },
+    }
+  },
 	is_ground_content = false,
 	groups = { cracky = 1, me_connect = 1 },
 	paramtype = "light",
