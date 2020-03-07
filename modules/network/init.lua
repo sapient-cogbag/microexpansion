@@ -107,11 +107,33 @@ function me.get_connected_network(start_pos)
 	end
 end
 
-function me.update_connected_machines(start_pos)
-	print("updating connected machines")
-	for npos in me.connected_nodes(start_pos) do
-		me.update_node(npos)
+function me.update_connected_machines(start_pos,event,include_start)
+  minetest.log("action","updating connected machines")
+  local ev = event or {type = "n/a"}
+  local sn = microexpansion.get_node(start_pos)
+  local sd = minetest.registered_nodes[sn.name]
+  local sm = sd.machine or {}
+  ev.origin = {
+    pos = start_pos,
+    name = sn.name,
+    type = sm.type
+  }
+  --print(dump2(ev,"event"))
+  for npos in me.connected_nodes(start_pos) do
+    if include_start or not vector.equals(npos,start_pos) then
+      me.update_node(npos,ev)
+    end
 	end
+end
+
+function me.send_event(spos,type,data)
+  local d = data or {}
+  local event = {
+    type = type,
+    net = d.net,
+    payload = d.payload
+  }
+  me.update_connected_machines(spos,event,false)
 end
 
 function me.get_network(pos)

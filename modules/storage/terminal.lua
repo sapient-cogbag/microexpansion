@@ -63,7 +63,9 @@ local function chest_formspec(pos, start_id, listname, page_max, q)
 		buttons
 end
 
-local function update_chest(pos)
+local function update_chest(pos,_,ev)
+  --for now all events matter
+  
 	local network = me.get_connected_network(pos)
 	local meta = minetest.get_meta(pos)
 	if network == nil then
@@ -112,10 +114,14 @@ microexpansion.register_node("term", {
 		meta:set_string("inv_name", "none")
 		meta:set_int("page", 1)
 		local net = me.get_connected_network(pos)
+		me.send_event(pos,"connect",{net=net})
 		if net then
 			update_chest(pos)
 		end
 	end,
+	after_destruct = function(pos)
+   me.send_event(pos,"disconnect")
+  end,
 	on_metadata_inventory_take = function(pos, listname, _, stack)
 		if listname == "search" then
 			local net = me.get_connected_network(pos)

@@ -2,8 +2,72 @@
 
 local me = microexpansion
 
-local function update_drive(pos)
-	--FIXME: check if we got connected/disconnected and reroute items
+local netdrives
+
+-- load drives
+local function load_drives()
+  local f = io.open(me.worldpath.."/microexpansion_drives", "r")
+  if f then
+    netdrives = minetest.deserialize(f:read("*all")) or {}
+    f:close()
+    if type(res) == "table" then
+      for _,d in pairs(res) do
+       table.insert(netdrives,d)
+      end
+    end
+  end
+end
+
+-- load now
+load_drives()
+
+-- save drives
+local function save_drives()
+  local f = io.open(me.worldpath.."/microexpansion_drives", "w")
+  f:write(minetest.serialize(netdrives))
+  f:close()
+end
+
+-- save on server shutdown
+minetest.register_on_shutdown(save_drives)
+
+local function get_drive_controller(pos)
+  for i,d in pairs(netdrives) do
+    if d.dpos then
+      if vector.equals(pos, d.dpos) then
+        return d,i
+      end
+    end
+  end
+  return --false,#netdrives+1
+end
+
+local function set_drive_controller(dpos,setd,cpos,i)
+  if i then
+    local dt = netdrives[i]
+    if dt then
+      if setd then
+        dt.dpos = dpos
+      end
+      if cpos ~= nil then
+        dt.cpos = cpos
+      end
+    else
+      netdrives[i] = {dpos = dpos, cpos = cpos}
+    end
+  else
+    local dt = get_drive_controller(dpos)
+    if dt then
+      if setd then
+        dt.dpos = dpos
+      end
+      if cpos ~= nil then
+        dt.cpos = cpos
+      end
+    else
+      table.insert(netdrives,{dpos = dpos, cpos = cpos})
+    end
+  end
 end
 
 local function write_to_cell(cell, items, item_count)
@@ -18,6 +82,179 @@ local function write_to_cell(cell, items, item_count)
 	item_meta:set_string("description", base_desc.."\n"..
 		minetest.colorize("grey", tostring(item_count).."/"..tostring(size).." Items ("..tostring(percent).."%)"))
 	return cell
+end
+
+local function write_drive_cells(pos,network) --args: pos, listname, index, stack, player
+  local meta = minetest.get_meta(pos)
+  local own_inv = meta:get_inventory()
+  if network == nil then
+    return false
+  end
+  local ctrl_inv = network:get_inventory()
+  local cells = {}
+  for i = 1, own_inv:get_size("main") do
+    local cell = own_inv:get_stack("main", i)
+    local name = cell:get_name()
+    if name ~= "" then
+      cells[i] = cell
+    end
+  end
+  local cell_idx = next(cells)
+  if cell_idx == nil then
+    return
+  end
+  local size = microexpansion.get_cell_size(cells[cell_idx]:get_name())
+  local items_in_cell_count = 0
+  local cell_items = {}
+
+  for i = 1, ctrl_inv:get_size("main") do
+    local stack_inside = ctrl_inv:get_stack("main", i)
+    local stack_name = stack_inside:get_name()
+    if stack_name ~= "" then
+      local item_count = stack_inside:get_count()
+      while item_count ~= 0 and cell_idx ~= nil do
+        --print(("stack to store: %s %i"):format(stack_name,item_count))
+        if size < items_in_cell_count + item_count then
+          local space = size - items_in_cell_count
+          table.insert(cell_items,("%s %i"):format(stack_name,space))
+          items_in_cell_count = items_in_cell_count + space
+
+          own_inv:set_stack("main", cell_idx, write_to_cell(cells[cell_idx],cell_items,items_in_cell_count))
+          cell_idx = next(cells, cell_idx)
+          if cell_idx == nil then
+            --there may be other drives within the network
+            minetest.log("info","too many items to store in drive")
+            break
+          end
+          size = microexpansion.get_cell_size(cells[cell_idx]:get_name())
+          items_in_cell_count = 0
+          cell_items = {}
+          item_count = item_count - space
+        else
+          items_in_cell_count = items_in_cell_count + item_count
+          table.insert(cell_items, ("%s %i"):format(stack_name,item_count))
+          item_count = 0
+        end
+      end
+    end
+    if cell_idx == nil then
+      break
+    end
+  end
+  while cell_idx ~= nil do
+    own_inv:set_stack("main", cell_idx, write_to_cell(cells[cell_idx],cell_items,items_in_cell_count))
+    items_in_cell_count = 0
+    cell_items = {}
+    cell_idx = next(cells, cell_idx)
+  end
+
+  return true
+end
+
+local function take_all(pos,net)
+  local meta = minetest.get_meta(pos)
+  local own_inv = meta:get_inventory()
+  local ctrl_inv = net:get_inventory()
+  local items = {}
+  for i = 1, own_inv:get_size("main") do
+    local stack = own_inv:get_stack("main", i)
+    local name = stack:get_name()
+    if name ~= "" then
+      local its = minetest.deserialize(stack:get_meta():get_string("items"))
+      for _,s in pairs(its) do
+        table.insert(items,s)
+      end
+    end
+  end 
+  for _,ostack in pairs(items) do
+    --this returns 99 (max count) even if it removes more
+    ctrl_inv:remove_item("main", ostack)
+    print(ostack)
+  end
+  
+  net:update()
+  me.send_event(pos,"items")
+end
+
+local function add_all(pos,net)
+  local meta = minetest.get_meta(pos)
+  local own_inv = meta:get_inventory()
+  local ctrl_inv = net:get_inventory()
+  local items = {}
+  for i = 1, own_inv:get_size("main") do
+    local stack = own_inv:get_stack("main", i)
+    local name = stack:get_name()
+    if name ~= "" then
+      local its = minetest.deserialize(stack:get_meta():get_string("items"))
+      if its then
+        for _,s in pairs(its) do
+          table.insert(items,s)
+        end
+      end
+    end
+  end 
+  for _,ostack in pairs(items) do
+    me.insert_item(ostack, ctrl_inv, "main")
+    print(ostack)
+  end
+  
+  net:update()
+  me.send_event(pos,"items",{net = net})
+end
+
+function me.disconnect_drive(pos,ncpos)
+  minetest.log("action","disconnecting drive at "..minetest.pos_to_string(pos))
+  local fc,i = get_drive_controller(pos)
+  if not fc.cpos then
+    return
+  end
+  local fnet = me.get_network(fc.cpos)
+  write_drive_cells(pos,fnet)
+  if ncpos then
+    set_drive_controller(pos,false,ncpos,i)
+  else
+    set_drive_controller(pos,false,false,i)
+  end
+  if fnet then
+    take_all(pos,fnet)
+  else
+    minetest.log("warning","drive couldn't take items from its former network")
+  end
+end
+
+local function update_drive(pos,_,ev)
+  if ev.type~="connect" and ev.type~="disconnect" then
+    return
+  end
+  local fc,i = get_drive_controller(pos)
+  local cnet = ev.net or me.get_connected_network(pos)
+  if cnet then
+    if not fc then
+      minetest.log("action","connecting drive at "..minetest.pos_to_string(pos))
+      set_drive_controller(pos,true,cnet.controller_pos,i)
+      add_all(pos,cnet)
+    elseif not fc.cpos then
+      minetest.log("action","connecting drive at "..minetest.pos_to_string(pos))
+      set_drive_controller(pos,false,cnet.controller_pos,i)
+      add_all(pos,cnet)
+    elseif not vector.equals(fc.cpos,cnet.controller_pos) then
+      minetest.log("action","reconnecting drive at "..minetest.pos_to_string(pos))
+      write_drive_cells(pos,me.get_network(fc.cpos))
+      set_drive_controller(pos,false,cnet.controller_pos,i)
+      add_all(pos,cnet)
+      me.disconnect_drive(pos,cnet.controller_pos)
+    else
+      if ev.origin.name == "microexpansion:ctrl" then
+        me.disconnect_drive(pos,false)
+      end
+    end
+  else
+    if fc then
+      if fc.cpos then
+        me.disconnect_drive(pos,false)
+      end
+    end
+  end
 end
 
 -- [me chest] Register node
@@ -62,12 +299,16 @@ microexpansion.register_node("drive", {
 		]])
 		local inv = meta:get_inventory()
 		inv:set_size("main", 10)
+		me.send_event(pos,"connect")
 	end,
 	can_dig = function(pos)
 		local meta = minetest.get_meta(pos)
 		local inv = meta:get_inventory()
 		return inv:is_empty("main")
 	end,
+	after_destruct = function(pos)
+   me.send_event(pos,"disconnect")
+  end,
 	allow_metadata_inventory_put = function(_, _, _, stack)
 		if minetest.get_item_group(stack:get_name(), "microexpansion_cell") ~= 0 then
 			return 1
@@ -76,7 +317,7 @@ microexpansion.register_node("drive", {
 		end
 	end,
 	on_metadata_inventory_put = function(pos, _, _, stack)
-		me.update_connected_machines(pos)
+		me.send_event(pos,"item_cap")
 		local network = me.get_connected_network(pos)
 		if network == nil then
 			return
@@ -85,77 +326,18 @@ microexpansion.register_node("drive", {
 		local items = minetest.deserialize(stack:get_meta():get_string("items"))
 		if items == nil then
 			print("no items")
-			me.update_connected_machines(pos)
+			me.send_event(pos,"items",{net=network})
 			return
 		end
 		network:set_storage_space(#items)
 		for _,s in pairs(items) do
 			me.insert_item(s, ctrl_inv, "main")
 		end
-		me.update_connected_machines(pos)
+		me.send_event(pos,"items",{net=network})
 	end,
 	allow_metadata_inventory_take = function(pos,_,_,stack) --args: pos, listname, index, stack, player
-		local meta = minetest.get_meta(pos)
-		local own_inv = meta:get_inventory()
-		local network = me.get_connected_network(pos)
-		if network == nil then
-			return stack:get_count()
-		end
-		local ctrl_inv = network:get_inventory()
-		local cells = {}
-		for i = 1, own_inv:get_size("main") do
-			local cell = own_inv:get_stack("main", i)
-			local name = cell:get_name()
-			if name ~= "" then
-				cells[i] = cell
-			end
-		end
-		local cell_idx = next(cells)
-		local size = microexpansion.get_cell_size(cells[cell_idx]:get_name())
-		local items_in_cell_count = 0
-		local cell_items = {}
-		assert(cell_idx,"cannot take a cell from an empty drive")
-
-		for i = 1, ctrl_inv:get_size("main") do
-			local stack_inside = ctrl_inv:get_stack("main", i)
-			local stack_name = stack_inside:get_name()
-			if stack_name ~= "" then
-				local item_count = stack_inside:get_count()
-				while item_count ~= 0 and cell_idx ~= nil do
-				  --print(("stack to store: %s %i"):format(stack_name,item_count))
-					if size < items_in_cell_count + item_count then
-						local space = size - items_in_cell_count
-						table.insert(cell_items,("%s %i"):format(stack_name,space))
-						items_in_cell_count = items_in_cell_count + space
-
-						own_inv:set_stack("main", cell_idx, write_to_cell(cells[cell_idx],cell_items,items_in_cell_count))
-						cell_idx = next(cells, cell_idx)
-						size = microexpansion.get_cell_size(cells[cell_idx]:get_name())
-            items_in_cell_count = 0
-            cell_items = {}
-            item_count = item_count - space
-            if cell_idx == nil then
-              --there may be other drives within the network
-							minetest.log("info","too many items to store in drive")
-						end
-					else
-						items_in_cell_count = items_in_cell_count + item_count
-						table.insert(cell_items, ("%s %i"):format(stack_name,item_count))
-						item_count = 0
-					end
-				end
-			end
-			if cell_idx == nil then
-				break
-			end
-		end
-		while cell_idx ~= nil do
-			own_inv:set_stack("main", cell_idx, write_to_cell(cells[cell_idx],cell_items,items_in_cell_count))
-			items_in_cell_count = 0
-			cell_items = {}
-			cell_idx = next(cells, cell_idx)
-		end
-
+    local network = me.get_connected_network(pos)
+		write_drive_cells(pos,network)
 		return stack:get_count()
 	end,
 	on_metadata_inventory_take = function(pos, _, _, stack)
@@ -163,11 +345,11 @@ microexpansion.register_node("drive", {
 		if network == nil then
 			return
 		end
+		me.send_event(pos,"item_cap",{net=network})
 		local ctrl_inv = network:get_inventory()
 		local items = minetest.deserialize(stack:get_meta():get_string("items"))
 		if items == nil then
 		  network:update()
-			me.update_connected_machines(pos)
 			return
 		end
 		for _,ostack in pairs(items) do
@@ -177,6 +359,6 @@ microexpansion.register_node("drive", {
 		--print(stack:to_string())
 
     network:update()
-		me.update_connected_machines(pos)
+		me.send_event(pos,"items",{net=network})
 	end,
 })

@@ -3,6 +3,8 @@
 local me = microexpansion
 local network = me.network
 
+--FIXME: accept multiple controllers in one network
+
 -- [register node] Controller
 me.register_node("ctrl", {
 	description = "ME Controller",
@@ -42,7 +44,7 @@ me.register_node("ctrl", {
 	},
 	groups = { cracky = 1, me_connect = 1, },
 	connect_sides = "nobottom",
-	me_update = function(pos)
+	me_update = function(pos,_,ev)
     local cnet = me.get_network(pos)
     if cnet == nil then
       minetest.log("error","no network for ctrl at pos "..minetest.pos_to_string(pos))
@@ -50,30 +52,40 @@ me.register_node("ctrl", {
     end
     cnet:update()
   end,
+  on_construct = function(pos)
+    local meta = minetest.get_meta(pos)
+    local net = network.new({controller_pos = pos})
+    table.insert(me.networks,net)
+    me.send_event(pos,"connect",{net=net})
+
+    meta:set_string("infotext", "Network Controller")
+  end,
 	after_place_node = function(pos, player)
 		local name = player:get_player_name()
 		local meta = minetest.get_meta(pos)
-		table.insert(me.networks,network.new({controller_pos = pos}))
-		me.update_connected_machines(pos)
-
 		meta:set_string("infotext", "Network Controller (owned by "..name..")")
 		meta:set_string("owner", name)
 	end,
 	on_destruct = function(pos)
-		local net,idx = me.get_network(pos)
-		if net then
-			net:destruct()
-		end
-		if idx then
-			table.remove(me.networks,idx)
-		end
-		me.update_connected_machines(pos)
+    local net = me.get_network(pos)
+    local net,idx = me.get_network(pos)
+    --disconnect all those who need the network
+    me.send_event(pos,"disconnect",{net=net})
+    if net then
+      net:destruct()
+    end
+    if idx then
+      table.remove(me.networks,idx)
+    end
+    --disconnect all those that haven't realized the network is gone
+    me.send_event(pos,"disconnect")
 	end,
-	after_dig_node = function(pos)
-	  me.update_connected_machines(pos)
+	after_destruct = function(pos)
+    --disconnect all those that haven't realized the controller was disconnected
+    me.send_event(pos,"disconnect")
 	end,
 	machine = {
-		type = "transporter",
+		type = "controller",
 	},
 })
 
@@ -102,9 +114,18 @@ me.register_machine("cable", {
 	},
 	paramtype = "light",
 	groups = { crumbly = 1, },
-	after_place_node = me.update_connected_machines,
-	after_dig_node = me.update_connected_machines,
-	me_update = function(pos)
+	--TODO: move these functions into the registration
+	on_construct = function(pos)
+	 me.send_event(pos,"connect")
+	end,
+	after_destruct = function(pos)
+	 me.send_event(pos,"disconnect")
+	end,
+	me_update = function(pos,_,ev)
+	 if ev then
+	   if ev.type ~= "disconnect" then return end
+	 end
+	 --maybe this shouldn't be called on every update
 	 local meta = minetest.get_meta(pos)
 	 if me.get_connected_network(pos) then
     meta:set_string("infotext", "Network connected")
@@ -113,6 +134,6 @@ me.register_machine("cable", {
 	 end
 	end,
 	machine = {
-		type = "transporter",
+		type = "conductor",
 	},
 })

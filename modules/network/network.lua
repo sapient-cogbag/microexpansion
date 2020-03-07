@@ -294,7 +294,7 @@ function network:serialize()
 end
 
 function network:destruct()
+  minetest.remove_detached_inventory(self:get_inventory_name())
   self.controller_pos = nil
   self.inv = nil
-  minetest.remove_detached_inventory(self:get_inventory_name())
 end

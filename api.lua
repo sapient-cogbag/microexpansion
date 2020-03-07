@@ -125,10 +125,11 @@ function microexpansion.get_node(pos)
 	return minetest.get_node(pos)
 end
 
-function microexpansion.update_node(pos)
-	local node = microexpansion.get_node(pos)
+function microexpansion.update_node(pos,event)
+  local node = microexpansion.get_node(pos)
 	local def = minetest.registered_nodes[node.name]
-	if def.me_update then
-		def.me_update(pos,node)
+	local ev = event or {type = "n/a"}
+  if def.me_update then
+		def.me_update(pos,node,ev)
 	end
 end
