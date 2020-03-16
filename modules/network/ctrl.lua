@@ -67,7 +67,6 @@ me.register_node("ctrl", {
 		meta:set_string("owner", name)
 	end,
 	on_destruct = function(pos)
-    local net = me.get_network(pos)
     local net,idx = me.get_network(pos)
     --disconnect all those who need the network
     me.send_event(pos,"disconnect",{net=net})

@@ -4,7 +4,9 @@ read_globals = {
 	"minetest", "default",
 	"dump", "vector",
 	"VoxelManip", "VoxelArea",
-	"ItemStack", "PseudoRandom",
+	"ItemStack",
+	"pipeworks",
+	"PseudoRandom",
 	"stairsplus", "intllib",
 	"Settings",
 	math = { fields = {"sign"} }
