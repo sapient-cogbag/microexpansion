@@ -1,6 +1,7 @@
 -- microexpansion/machines.lua
 
 local me = microexpansion
+local pipeworks_enabled = minetest.get_modpath("pipeworks") and true or false
 
 -- [me chest] Get formspec
 local function chest_formspec(pos, start_id, listname, page_max, q)
@@ -80,9 +81,6 @@ local function update_chest(pos,_,ev)
 	meta:set_string("formspec", chest_formspec(pos, 1, "main", page_max))
 end
 
---FIXME: items inserted in a search inventory vanish
---TODO: add a main inv that transfers to the network
-
 -- [me chest] Register node
 microexpansion.register_node("term", {
 	description = "ME Terminal",
@@ -104,7 +102,7 @@ microexpansion.register_node("term", {
     }
   },
 	is_ground_content = false,
-	groups = { cracky = 1, me_connect = 1 },
+	groups = { cracky = 1, me_connect = 1, tubedevice = 1, tubedevice_receiver = 1 },
 	paramtype = "light",
 	paramtype2 = "facedir",
 	me_update = update_chest,
@@ -122,13 +120,49 @@ microexpansion.register_node("term", {
 	after_destruct = function(pos)
    me.send_event(pos,"disconnect")
   end,
+  on_metadata_inventory_put = function(pos, listname, _, stack)
+    local net = me.get_connected_network(pos)
+    local inv = net:get_inventory()
+    me.insert_item(stack, inv, "main")
+  end,
 	on_metadata_inventory_take = function(pos, listname, _, stack)
-		if listname == "search" then
-			local net = me.get_connected_network(pos)
-			local inv = net:get_inventory()
-			inv:remove_item("main", stack)
-		end
+		local net = me.get_connected_network(pos)
+		local inv = net:get_inventory()
+    inv:remove_item("main", stack)
 	end,
+	tube = {
+    can_insert = function(pos, _, stack) --pos, node, stack, direction
+      local net = me.get_connected_network(pos)
+      local inv = net:get_inventory()
+      local max_slots = inv:get_size("main")
+      local max_items = net.capacity_cache
+
+      local slots, items = 0, 0
+      -- Get amount of items in drive
+      for i = 1, max_slots do
+        local dstack = inv:get_stack("main", i)
+        if dstack:get_name() ~= "" then
+          slots = slots + 1
+          local num = dstack:get_count()
+          if num == 0 then num = 1 end
+          items = items + num
+        end
+      end
+      items = items + stack:get_count()
+      return max_items > items
+    end,
+    insert_object = function(pos, _, stack)
+      local net = me.get_connected_network(pos)
+      local inv = net:get_inventory()
+      me.insert_item(stack, inv, "main")
+      net:set_storage_space(true)
+      --TODO: leftover
+      return ItemStack()
+    end,
+    connect_sides = {left=1, right=1, front=1, back=1, top=1, bottom=1},
+  },
+  after_place_node = pipeworks_enabled and pipeworks.after_place,
+  after_dig_node = pipeworks_enabled and pipeworks.after_dig,
 	on_receive_fields = function(pos, _, fields, sender)
 		local net,cp = me.get_connected_network(pos)
 		if net then

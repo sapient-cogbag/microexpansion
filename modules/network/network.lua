@@ -220,7 +220,7 @@ local function create_inventory(net)
       local slots, items = 0, 0
       -- Get amount of items in drive
       for i = 1, max_slots do
-        local dstack = inv:get_stack("main", i)
+        local dstack = inv:get_stack(listname, i)
         if dstack:get_name() ~= "" then
           slots = slots + 1
           local num = dstack:get_count()

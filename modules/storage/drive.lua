@@ -10,11 +10,13 @@ local function load_drives()
   if f then
     netdrives = minetest.deserialize(f:read("*all")) or {}
     f:close()
+    --[[
     if type(res) == "table" then
       for _,d in pairs(res) do
        table.insert(netdrives,d)
       end
     end
+    ]]
   end
 end
 
