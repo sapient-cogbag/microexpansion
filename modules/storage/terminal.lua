@@ -111,6 +111,10 @@ microexpansion.register_node("term", {
 		meta:set_string("formspec", chest_formspec(pos, 1))
 		meta:set_string("inv_name", "none")
 		meta:set_int("page", 1)
+
+		local own_inv = meta:get_inventory()
+		own_inv:set_size("src", 1)
+
 		local net = me.get_connected_network(pos)
 		me.send_event(pos,"connect",{net=net})
 		if net then
