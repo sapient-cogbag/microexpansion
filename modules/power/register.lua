@@ -88,3 +88,5 @@ function me.get_def(name, key)
 		return def
 	end
 end
+
+microexpansion.log("Machine Registration API loaded")
