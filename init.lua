@@ -67,6 +67,8 @@ function microexpansion.require_module(name)
 	if settings[name] then
 		microexpansion.log("loading module " + name)
 		return microexpansion.load_module(name)
+	else
+		microexpansion.log("not loading module " + name)
 	end
 end
 
