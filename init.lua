@@ -65,10 +65,10 @@ end
 -- [function] Require module (does not override modules.conf)
 function microexpansion.require_module(name)
 	if settings[name] then
-		microexpansion.log("loading module " + name)
+		microexpansion.log("loading module " .. name)
 		return microexpansion.load_module(name)
 	else
-		microexpansion.log("not loading module " + name)
+		microexpansion.log("not loading module " .. name)
 	end
 end
 
