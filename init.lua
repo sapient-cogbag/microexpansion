@@ -72,6 +72,8 @@ function microexpansion.require_module(name)
 	end
 end
 
+microexpansion.require_module("power")
+
 for name,enabled in pairs(settings) do
 	if enabled ~= false then
 		microexpansion.load_module(name)
