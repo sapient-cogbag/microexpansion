@@ -9,6 +9,5 @@ me.power = {}
 -- Load Resources
 
 dofile(path.."/network.lua") -- Network Management
-dofile(path.."/register.lua") -- Machine Registration
 --dofile(path.."/ctrl.lua") -- Controller/wires
 dofile(path.."/gen.lua") -- Generators

@@ -24,6 +24,8 @@ end
 
 -- Load API
 dofile(modpath.."/api.lua")
+-- Machine Registration
+dofile(modpath.."/register.lua")
 
 -------------------
 ----- MODULES -----
@@ -71,8 +73,6 @@ function microexpansion.require_module(name)
 		microexpansion.log("not loading module " .. name)
 	end
 end
-
-microexpansion.require_module("power")
 
 for name,enabled in pairs(settings) do
 	if enabled ~= false then

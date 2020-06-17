@@ -1,4 +1,4 @@
--- power/register.lua
+-- register.lua
 
 --[[ Machine Registration API ]]
 
@@ -29,7 +29,7 @@ function me.register_machine(itemstring, def)
 		end
 
 		-- Trace Network
-		power.trace(pos)
+		--power.trace(pos)
 
 		-- Set demand
 		if def.demand then
@@ -37,7 +37,9 @@ function me.register_machine(itemstring, def)
 		end
 
 		if type(def.machine) == "table" then
-			power.add_machine(pos, def.machine)
+			if power then
+				power.add_machine(pos, def.machine)
+			end
 		end
 	end
 	-- Set on_destruct
@@ -55,7 +57,7 @@ function me.register_machine(itemstring, def)
 			-- Remove item from network
 			me.network_remove(pos)
 			-- Retrace Network
-			power.trace(pos)
+			--power.trace(pos)
 		end
 	end
 	-- Set connects_to

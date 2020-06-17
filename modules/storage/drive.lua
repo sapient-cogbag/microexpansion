@@ -17,6 +17,8 @@ local function load_drives()
       end
     end
     ]]
+  else
+    netdrives = {}
   end
 end
 

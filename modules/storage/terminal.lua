@@ -167,12 +167,12 @@ microexpansion.register_node("term", {
   },
   after_place_node = pipeworks_enabled and pipeworks.after_place,
   after_dig_node = pipeworks_enabled and pipeworks.after_dig,
-	on_receive_fields = function(pos, _, fields, sender)
-		local net,cp = me.get_connected_network(pos)
-		if net then
-		  if cp then
-		    minetest.log("none","network and ctrl_pos")
-	    else
+    on_receive_fields = function(pos, _, fields, sender)
+      local net,cp = me.get_connected_network(pos)
+      if net then
+        if cp then
+          minetest.log("info","network and ctrl_pos")
+        else
 	     minetest.log("warning","network but no ctrl_pos")
 		  end
 		else
