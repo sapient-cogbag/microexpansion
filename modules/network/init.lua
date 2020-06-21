@@ -4,8 +4,7 @@ local networks = me.networks
 local path     = microexpansion.get_module_path("network")
 
 local function split_stack_values(stack)
-  local stack_name
-  local stack_count
+  local stack_name, stack_count, stack_meta
   if type(stack) == "string" then
     local split_string = stack:split(" ")
     stack_name = split_string[1]
@@ -17,29 +16,32 @@ local function split_stack_values(stack)
   else
     stack_name = stack:get_name()
     stack_count = stack:get_count()
+    stack_meta = stack:get_meta()
   end
-  return stack_name, stack_count
+  return stack_name, stack_count, stack_meta
 end
 
 function me.insert_item(stack, inv, listname)
   if me.settings.huge_stacks == false then
     return inv:add_item(listname, stack)
   end
-  local stack_name,stack_count = split_stack_values(stack)
+  local stack_name,stack_count,stack_meta = split_stack_values(stack)
   local found = false
   for i = 0, inv:get_size(listname) do
     local inside = inv:get_stack(listname, i)
     if inside:get_name() == stack_name then
-      local total_count = inside:get_count() + stack_count
-      -- bigger item count is not possible we only have unsigned 16 bit
-      if total_count <= math.pow(2,16) then
-        if not inside:set_count(total_count) then
-          minetest.log("error"," adding items to stack in microexpansion network failed")
-          print("stack is now " .. inside:to_string())
+      if inside:get_meta():equals(stack_meta) then
+        local total_count = inside:get_count() + stack_count
+        -- bigger item count is not possible we only have unsigned 16 bit
+        if total_count <= math.pow(2,16) then
+          if not inside:set_count(total_count) then
+            minetest.log("error"," adding items to stack in microexpansion network failed")
+            print("stack is now " .. inside:to_string())
+          end
+          inv:set_stack(listname, i, inside)
+          found = true
+          break;
         end
-        inv:set_stack(listname, i, inside)
-        found = true
-        break;
       end
     end
   end
