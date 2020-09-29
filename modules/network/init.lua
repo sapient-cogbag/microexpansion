@@ -4,32 +4,38 @@ local networks = me.networks
 local path     = microexpansion.get_module_path("network")
 
 local function split_stack_values(stack)
-  local stack_name, stack_count, stack_meta
+  local stack_name, stack_count, stack_wear, stack_meta
   if type(stack) == "string" then
     local split_string = stack:split(" ")
     stack_name = split_string[1]
     if (#split_string > 1) then
       stack_count = tonumber(split_string[2])
+      if (#split_string > 2) then
+        stack_wear = tonumber(split_string[3])
+      else
+        stack_wear = 0
+      end
     else
       stack_count = 1
     end
   else
     stack_name = stack:get_name()
     stack_count = stack:get_count()
+    stack_wear = stack:get_wear()
     stack_meta = stack:get_meta()
   end
-  return stack_name, stack_count, stack_meta
+  return stack_name, stack_count, stack_wear, stack_meta
 end
 
 function me.insert_item(stack, inv, listname)
   if me.settings.huge_stacks == false then
     return inv:add_item(listname, stack)
   end
-  local stack_name,stack_count,stack_meta = split_stack_values(stack)
+  local stack_name,stack_count,stack_wear,stack_meta = split_stack_values(stack)
   local found = false
   for i = 0, inv:get_size(listname) do
     local inside = inv:get_stack(listname, i)
-    if inside:get_name() == stack_name then
+    if inside:get_name() == stack_name and inside:get_wear() == stack_wear then
       if inside:get_meta():equals(stack_meta) then
         local total_count = inside:get_count() + stack_count
         -- bigger item count is not possible we only have unsigned 16 bit

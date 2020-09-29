@@ -209,7 +209,7 @@ local function create_inventory(net)
       local inside_stack = inv:get_stack(listname, index)
       local stack_name = stack:get_name()
       -- improve performance by skipping unnessecary calls
-      if inside_stack:get_name() ~= stack_name or inside_stack:get_count() >= inside_stack:get_stack_max()  then
+      if inside_stack:get_name() ~= stack_name or inside_stack:get_count() >= inside_stack:get_stack_max() then
         if inv:get_stack(listname, index+1):get_name() ~= "" then
           return stack:get_count()
         end
