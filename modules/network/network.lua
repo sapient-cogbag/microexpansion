@@ -104,7 +104,7 @@ end
 function network:remove_power_capacity(power)
 	self.power_storage = self.power_storage - power
 	if self.power_storage < 0 then
-		minetest.log("warning","[Microexpansion] power storage of network "..self.." dropped below zero")
+		microexpansion.log("power storage of network "..self.." dropped below zero","warning")
 	end
 end
 
@@ -286,6 +286,10 @@ function network:serialize()
   for i,v in pairs(self) do
     if i == "inv" then
       sert.strinv = self:save_inventory()
+    elseif i == "strinv" then
+      if not sert.strinv then
+        sert[i] = v
+      end
     else
       sert[i] = v
     end

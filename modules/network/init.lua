@@ -44,7 +44,7 @@ function me.insert_item(stack, inv, listname)
         -- bigger item count is not possible, we only have unsigned 16 bit
         if total_count <= math.pow(2,16) then
           if not inside:set_count(total_count) then
-            minetest.log("error"," adding items to stack in microexpansion network failed")
+            microexpansion.log("adding items to stack in microexpansion network failed","error")
             print("stack is now " .. inside:to_string())
           end
           inv:set_stack(listname, i, inside)
@@ -119,7 +119,7 @@ function me.get_connected_network(start_pos)
 end
 
 function me.update_connected_machines(start_pos,event,include_start)
-  minetest.log("action","updating connected machines")
+  microexpansion.log("updating connected machines","action")
   local ev = event or {type = "n/a"}
   local sn = microexpansion.get_node(start_pos)
   local sd = minetest.registered_nodes[sn.name]
