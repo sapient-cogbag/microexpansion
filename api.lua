@@ -9,8 +9,13 @@ function microexpansion.register_recipe(output, recipe)
 	end
 
 	for _,r in ipairs(recipe) do
+        local recipe_type = "shaped"
+        if type(r[2]) == "string" then
+            recipe_type = r[2]
+        end
+
 		local def = {
-      type   = type(r[2]) == "string" and r[2],
+      type   = recipe_type,
       output = output.." "..(r[1] or 1),
       recipe = r[3] or r[2]
     }
