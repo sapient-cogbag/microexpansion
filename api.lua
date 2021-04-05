@@ -10,7 +10,7 @@ function microexpansion.register_recipe(output, recipe)
 
 	for _,r in ipairs(recipe) do
 		local def = {
-      type   = type(r[2]) == "string" and r[2],
+      type   = type(r[2]) == "string" and r[2] or nil,
       output = output.." "..(r[1] or 1),
       recipe = r[3] or r[2]
     }
