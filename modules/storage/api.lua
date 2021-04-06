@@ -72,7 +72,7 @@ function microexpansion.move_inv(inv1, inv2, max)
           local leftover = tinv:add_item(tname, v)
           finv:remove_item(fname, v)
           if leftover and not(leftover:is_empty()) then
-            minetest.log("warning","leftover items when transfering inventory")
+            microexpansion.log("leftover items when transferring inventory","warning")
             finv:add_item(fname, leftover)
           end
         end

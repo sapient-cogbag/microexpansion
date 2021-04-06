@@ -171,15 +171,15 @@ microexpansion.register_node("term", {
       local net,cp = me.get_connected_network(pos)
       if net then
         if cp then
-          minetest.log("info","network and ctrl_pos")
+          microexpansion.log("network and ctrl_pos","info")
         else
-	     minetest.log("warning","network but no ctrl_pos")
+	     microexpansion.log("network but no ctrl_pos","warning")
 		  end
 		else
 		  if cp then
-		    minetest.log("warning","no network but ctrl_pos")
+		    microexpansion.log("no network but ctrl_pos","warning")
 		  else
-		    minetest.log("info","no network and no ctrl_pos")
+		    microexpansion.log("no network and no ctrl_pos","info")
 		  end
 		end
 		local meta = minetest.get_meta(pos)
@@ -190,7 +190,7 @@ microexpansion.register_node("term", {
 		if cp then
 			ctrl_inv = net:get_inventory()
 		else
-		  minetest.log("warning","no network connected")
+		  microexpansion.log("no network connected","warning")
 		  return
 		end
 		local inv

@@ -47,7 +47,7 @@ me.register_node("ctrl", {
 	me_update = function(pos,_,ev)
     local cnet = me.get_network(pos)
     if cnet == nil then
-      minetest.log("error","no network for ctrl at pos "..minetest.pos_to_string(pos))
+      microexpansion.log("no network for ctrl at pos "..minetest.pos_to_string(pos),"error")
       return
     end
     cnet:update()

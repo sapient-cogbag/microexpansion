@@ -88,7 +88,7 @@ local function write_to_cell(cell, items, item_count)
 	return cell
 end
 
-local function write_drive_cells(pos,network) --args: pos, listname, index, stack, player
+local function write_drive_cells(pos,network)
   local meta = minetest.get_meta(pos)
   local own_inv = meta:get_inventory()
   if network == nil then
@@ -113,21 +113,26 @@ local function write_drive_cells(pos,network) --args: pos, listname, index, stac
 
   for i = 1, ctrl_inv:get_size("main") do
     local stack_inside = ctrl_inv:get_stack("main", i)
-    local stack_name = stack_inside:get_name()
-    if stack_name ~= "" then
+    local item_string = stack_inside:to_string()
+    if item_string ~= "" then
+      item_string = item_string:split(" ")
       local item_count = stack_inside:get_count()
+      if item_count > 1 and item_string[2] ~= tostring(item_count) then
+        microexpansion.log("stack count differs from second field of the item string","warning")
+      end
       while item_count ~= 0 and cell_idx ~= nil do
-        --print(("stack to store: %s %i"):format(stack_name,item_count))
+        --print(("stack to store: %q"):format(table.concat(item_string," ")))
         if size < items_in_cell_count + item_count then
           local space = size - items_in_cell_count
-          table.insert(cell_items,("%s %i"):format(stack_name,space))
+          item_string[2] = tostring(space)
+          table.insert(cell_items,table.concat(item_string," "))
           items_in_cell_count = items_in_cell_count + space
 
           own_inv:set_stack("main", cell_idx, write_to_cell(cells[cell_idx],cell_items,items_in_cell_count))
           cell_idx = next(cells, cell_idx)
           if cell_idx == nil then
             --there may be other drives within the network
-            minetest.log("info","too many items to store in drive")
+            microexpansion.log("too many items to store in drive","info")
             break
           end
           size = microexpansion.get_cell_size(cells[cell_idx]:get_name())
@@ -136,7 +141,8 @@ local function write_drive_cells(pos,network) --args: pos, listname, index, stac
           item_count = item_count - space
         else
           items_in_cell_count = items_in_cell_count + item_count
-          table.insert(cell_items, ("%s %i"):format(stack_name,item_count))
+          item_string[2] = tostring(item_count)
+          table.insert(cell_items,table.concat(item_string," "))
           item_count = 0
         end
       end
@@ -207,7 +213,7 @@ local function add_all(pos,net)
 end
 
 function me.disconnect_drive(pos,ncpos)
-  minetest.log("action","disconnecting drive at "..minetest.pos_to_string(pos))
+  microexpansion.log("disconnecting drive at "..minetest.pos_to_string(pos),"action")
   local fc,i = get_drive_controller(pos)
   if not fc.cpos then
     return
@@ -222,7 +228,7 @@ function me.disconnect_drive(pos,ncpos)
   if fnet then
     take_all(pos,fnet)
   else
-    minetest.log("warning","drive couldn't take items from its former network")
+    microexpansion.log("drive couldn't take items from its former network","warning")
   end
 end
 
@@ -234,15 +240,15 @@ local function update_drive(pos,_,ev)
   local cnet = ev.net or me.get_connected_network(pos)
   if cnet then
     if not fc then
-      minetest.log("action","connecting drive at "..minetest.pos_to_string(pos))
+      microexpansion.log("connecting drive at "..minetest.pos_to_string(pos),"action")
       set_drive_controller(pos,true,cnet.controller_pos,i)
       add_all(pos,cnet)
     elseif not fc.cpos then
-      minetest.log("action","connecting drive at "..minetest.pos_to_string(pos))
+      microexpansion.log("connecting drive at "..minetest.pos_to_string(pos),"action")
       set_drive_controller(pos,false,cnet.controller_pos,i)
       add_all(pos,cnet)
     elseif not vector.equals(fc.cpos,cnet.controller_pos) then
-      minetest.log("action","reconnecting drive at "..minetest.pos_to_string(pos))
+      microexpansion.log("reconnecting drive at "..minetest.pos_to_string(pos),"action")
       write_drive_cells(pos,me.get_network(fc.cpos))
       set_drive_controller(pos,false,cnet.controller_pos,i)
       add_all(pos,cnet)

@@ -3,45 +3,48 @@ me.networks    = {}
 local networks = me.networks
 local path     = microexpansion.get_module_path("network")
 
+--deprecated: use ItemStack(x) instead
+--[[
 local function split_stack_values(stack)
-  local stack_name, stack_count, stack_wear, stack_meta
   if type(stack) == "string" then
     local split_string = stack:split(" ")
-    stack_name = split_string[1]
-    if (#split_string > 1) then
-      stack_count = tonumber(split_string[2])
-      if (#split_string > 2) then
-        stack_wear = tonumber(split_string[3])
-      else
-        stack_wear = 0
-      end
-    else
-      stack_count = 1
+    if (#split_string < 1) then
+      return "",0,0,nil
     end
+    local stack_name = split_string[1]
+    if (#split_string < 2) then
+      return stack_name,1,0,nil
+    end
+    local stack_count = tonumber(split_string[2])
+    if (#split_string < 3) then
+      return stack_name,stack_count,0,nil
+    end
+    local stack_wear = tonumber(split_string[3])
+    if (#split_string < 4) then
+      return stack_name,stack_count,stack_wear,nil
+    end
+    return stack_name,stack_count,stack_wear,true
   else
-    stack_name = stack:get_name()
-    stack_count = stack:get_count()
-    stack_wear = stack:get_wear()
-    stack_meta = stack:get_meta()
+    return stack:get_name(), stack:get_count(), stack:get_wear(), stack:get_meta()
   end
-  return stack_name, stack_count, stack_wear, stack_meta
 end
+--]]
 
 function me.insert_item(stack, inv, listname)
   if me.settings.huge_stacks == false then
     return inv:add_item(listname, stack)
   end
-  local stack_name,stack_count,stack_wear,stack_meta = split_stack_values(stack)
+  local to_insert = type(stack) == "userdata" and stack or ItemStack(stack)
   local found = false
   for i = 0, inv:get_size(listname) do
     local inside = inv:get_stack(listname, i)
-    if inside:get_name() == stack_name and inside:get_wear() == stack_wear then
-      if inside:get_meta():equals(stack_meta) then
-        local total_count = inside:get_count() + stack_count
-        -- bigger item count is not possible we only have unsigned 16 bit
+    if inside:get_name() == to_insert:get_name() and inside:get_wear() == to_insert:get_wear() then
+      if inside:get_meta():equals(to_insert:get_meta()) then
+        local total_count = inside:get_count() + to_insert:get_count()
+        -- bigger item count is not possible, we only have unsigned 16 bit
         if total_count <= math.pow(2,16) then
           if not inside:set_count(total_count) then
-            minetest.log("error"," adding items to stack in microexpansion network failed")
+            microexpansion.log("adding items to stack in microexpansion network failed","error")
             print("stack is now " .. inside:to_string())
           end
           inv:set_stack(listname, i, inside)
@@ -116,7 +119,7 @@ function me.get_connected_network(start_pos)
 end
 
 function me.update_connected_machines(start_pos,event,include_start)
-  minetest.log("action","updating connected machines")
+  microexpansion.log("updating connected machines","action")
   local ev = event or {type = "n/a"}
   local sn = microexpansion.get_node(start_pos)
   local sd = minetest.registered_nodes[sn.name]
